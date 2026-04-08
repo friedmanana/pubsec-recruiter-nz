@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from strands import Agent, tool
 
+from models.job import EmploymentType, JobStatus
 from tools.jd_parser import (
     extract_text_from_pdf,
     extract_text_from_string,
     identify_jd_sections,
 )
-from models.job import JobDescription, JobStatus, EmploymentType
-
 
 _SENIORITY_SALARY_MAP = [
     (r"(?i)(chief|secretary|deputy\s+secretary|tier\s*[12])", "Band 7: $170,000 - $250,000+"),
@@ -68,7 +66,7 @@ def parse_job_description(raw_text: str, source_file: str = "") -> dict:
         ],
     )
     if not title:
-        first_lines = [l.strip() for l in raw_text.strip().splitlines() if l.strip()]
+        first_lines = [line.strip() for line in raw_text.strip().splitlines() if line.strip()]
         title = first_lines[0] if first_lines else "Untitled Role"
 
     organisation = _extract_field_from_text(

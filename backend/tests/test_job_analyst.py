@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import pytest
-
-from tools.jd_parser import identify_jd_sections, extract_text_from_string
 from agents.job_analyst_agent import (
+    enrich_jd_with_nz_context,
     parse_job_description,
     validate_jd_completeness,
-    enrich_jd_with_nz_context,
 )
-
+from tools.jd_parser import identify_jd_sections
 
 _SAMPLE_JD = """
 Senior Policy Analyst
