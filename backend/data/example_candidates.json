@@ -1,0 +1,158 @@
+[
+  {
+    "id": "d4e5f6a7-b8c9-0123-def0-234567890123",
+    "full_name": "Aroha Ngata",
+    "email": "aroha.ngata@email.co.nz",
+    "phone": "+64 21 456 789",
+    "location": "Wellington",
+    "linkedin_url": "https://www.linkedin.com/in/aroha-ngata-policy",
+    "source": "DIRECT_APPLY",
+    "current_title": "Policy Analyst",
+    "current_organisation": "Ministry of Social Development",
+    "years_experience": 7,
+    "skills": [
+      "Policy analysis and development",
+      "Cabinet paper writing",
+      "Stakeholder engagement",
+      "Quantitative research",
+      "Labour market analysis",
+      "Ministerial correspondence",
+      "Stats NZ data analysis",
+      "Treaty of Waitangi policy",
+      "Cross-agency collaboration",
+      "Te reo Māori (intermediate)"
+    ],
+    "qualifications": [
+      "Master of Public Policy, Victoria University of Wellington",
+      "Bachelor of Arts (Economics and Māori Studies), Victoria University of Wellington"
+    ],
+    "summary": "Experienced policy analyst with seven years in the NZ public sector, specialising in social and labour market policy. Proven track record delivering high-quality Cabinet papers and briefings for Ministers. Strong understanding of Treaty of Waitangi obligations and kaupapa Māori approaches to policy development. Previous experience at MSD and Treasury.",
+    "raw_cv_text": null,
+    "created_at": "2026-04-05T10:00:00"
+  },
+  {
+    "id": "e5f6a7b8-c9d0-1234-ef01-345678901234",
+    "full_name": "James Tuilagi",
+    "email": "j.tuilagi@gmail.com",
+    "phone": "+64 27 890 123",
+    "location": "Auckland",
+    "linkedin_url": "https://www.linkedin.com/in/james-tuilagi-ict",
+    "source": "LINKEDIN_XRAY",
+    "current_title": "Senior IT Project Manager",
+    "current_organisation": "Watercare Services Limited",
+    "years_experience": 10,
+    "skills": [
+      "ICT project management",
+      "PRINCE2 Practitioner",
+      "Agile (Scrum, SAFe)",
+      "Microsoft Azure",
+      "Vendor management",
+      "Risk and issue management",
+      "Budget management",
+      "Business requirements analysis",
+      "Change management",
+      "M365 migration",
+      "Stakeholder reporting"
+    ],
+    "qualifications": [
+      "Bachelor of Information Technology, Auckland University of Technology",
+      "PRINCE2 Practitioner",
+      "SAFe 5 Agilist"
+    ],
+    "summary": "Results-driven ICT Project Manager with a decade of experience delivering complex technology programmes in infrastructure and local government-adjacent organisations. Successfully led a $4.2M SCADA system upgrade at Watercare and managed vendor relationships across multiple concurrent projects. Strong communicator with experience presenting to executive and board-level stakeholders.",
+    "raw_cv_text": null,
+    "created_at": "2026-04-03T14:30:00"
+  },
+  {
+    "id": "f6a7b8c9-d0e1-2345-f012-456789012345",
+    "full_name": "Mere Taufa",
+    "email": "mere.taufa@xtra.co.nz",
+    "phone": "+64 22 345 678",
+    "location": "Christchurch",
+    "linkedin_url": "https://www.linkedin.com/in/mere-taufa-health",
+    "source": "SEEK",
+    "current_title": "Team Leader, Community Health",
+    "current_organisation": "Te Whatu Ora Waitaha Canterbury",
+    "years_experience": 12,
+    "skills": [
+      "Community health service management",
+      "Clinical governance",
+      "Workforce development",
+      "Māori and Pasifika health equity",
+      "Budget management",
+      "NGO partnership management",
+      "Whānau Ora principles",
+      "Kaupapa Māori health models",
+      "Performance management",
+      "Strategic planning"
+    ],
+    "qualifications": [
+      "Bachelor of Nursing, University of Canterbury",
+      "Postgraduate Diploma in Health Management, University of Otago",
+      "Current New Zealand Nursing Council practising certificate"
+    ],
+    "summary": "Dedicated health leader with 12 years in the Canterbury health system, currently leading a community nursing team of 18 FTE. Passionate about equitable health outcomes for Māori and Pasifika communities. Deep knowledge of the Canterbury health system, Te Whatu Ora structure, and whānau-centred care models. Experience managing budgets up to $3.5M.",
+    "raw_cv_text": null,
+    "created_at": "2026-04-06T09:15:00"
+  },
+  {
+    "id": "a7b8c9d0-e1f2-3456-0123-567890123456",
+    "full_name": "Connor Walsh",
+    "email": "connor.walsh@outlook.com",
+    "phone": null,
+    "location": "Wellington",
+    "linkedin_url": "https://www.linkedin.com/in/connor-walsh-analyst",
+    "source": "LINKEDIN_XRAY",
+    "current_title": "Junior Policy Analyst",
+    "current_organisation": "Ministry for the Environment",
+    "years_experience": 2,
+    "skills": [
+      "Policy research",
+      "Stakeholder consultation",
+      "Report writing",
+      "Data analysis",
+      "Environmental policy",
+      "Microsoft Office suite"
+    ],
+    "qualifications": [
+      "Bachelor of Arts (Political Science and Economics), University of Otago"
+    ],
+    "summary": "Early-career policy analyst currently working in environmental policy. Strong academic background with growing practical experience in policy development and stakeholder engagement. Eager to develop expertise in labour market or social policy. Limited Cabinet paper writing experience to date.",
+    "raw_cv_text": null,
+    "created_at": "2026-04-04T11:00:00"
+  },
+  {
+    "id": "b8c9d0e1-f2a3-4567-1234-678901234567",
+    "full_name": "Priya Sharma",
+    "email": "priya.sharma@gmail.com",
+    "phone": "+64 21 678 901",
+    "location": "Auckland",
+    "linkedin_url": "https://www.linkedin.com/in/priya-sharma-pm",
+    "source": "TRADEME",
+    "current_title": "Digital Transformation Programme Manager",
+    "current_organisation": "ANZ Bank New Zealand",
+    "years_experience": 14,
+    "skills": [
+      "Programme management",
+      "Digital transformation",
+      "Agile delivery",
+      "Azure DevOps",
+      "Cloud migration (AWS, Azure)",
+      "Vendor management",
+      "Executive stakeholder engagement",
+      "Budget management (up to $15M)",
+      "Change management",
+      "ITIL v4",
+      "Business analysis"
+    ],
+    "qualifications": [
+      "Bachelor of Engineering (Computer Science), University of Auckland",
+      "PMP (Project Management Professional)",
+      "PRINCE2 Practitioner",
+      "AWS Certified Solutions Architect (Associate)"
+    ],
+    "summary": "Highly experienced digital programme manager with 14 years in financial services and technology. Led a $12M core banking migration programme impacting 1.5 million customers. Strong technical depth combined with executive-level communication skills. Seeking to transition to the public sector to contribute to meaningful outcomes for New Zealanders. Limited local government experience but brings a strong commercial delivery track record.",
+    "raw_cv_text": null,
+    "created_at": "2026-04-07T08:45:00"
+  }
+]

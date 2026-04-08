@@ -1,0 +1,169 @@
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "title": "Senior Policy Analyst",
+    "organisation": "Ministry of Business, Innovation and Employment",
+    "department": "Labour Market Policy",
+    "location": "Wellington",
+    "salary_band": "Band 4: $100,000 - $120,000",
+    "employment_type": "permanent",
+    "closing_date": "2026-05-15T23:59:00",
+    "status": "OPEN",
+    "overview": "The Ministry of Business, Innovation and Employment (MBIE) is seeking an experienced Senior Policy Analyst to join our Labour Market Policy team. In this role, you will lead the development of evidence-based policy advice that shapes New Zealand's labour market outcomes. You will work closely with ministers, senior officials, business groups, unions, and community organisations to design policy solutions that are equitable, practical, and grounded in te ao Māori perspectives. This is a high-profile position that requires strong analytical skills, the ability to manage complex stakeholder relationships, and a commitment to the Public Service principles of stewardship and service to New Zealanders.",
+    "responsibilities": [
+      "Lead the development and delivery of high-quality, evidence-based policy advice to Ministers and senior officials on complex labour market issues",
+      "Undertake robust analysis of labour market data, research, and international comparisons to inform policy options",
+      "Engage meaningfully with Māori and Pasifika communities, industry groups, unions, and community stakeholders to inform policy development",
+      "Prepare Cabinet papers, briefing notes, and ministerial correspondence to a high standard",
+      "Manage relationships with other government agencies including Treasury, MHUD, MSD, and the Productivity Commission",
+      "Mentor and support junior analysts within the team",
+      "Contribute to MBIE's obligations under Te Tiriti o Waitangi and ensure policy advice reflects kaupapa Māori principles where relevant",
+      "Represent MBIE at cross-agency working groups and sector forums"
+    ],
+    "required_skills": [
+      "Policy analysis and development",
+      "Quantitative and qualitative research methods",
+      "Stakeholder engagement and relationship management",
+      "Cabinet paper and ministerial briefing writing",
+      "Labour market economics or industrial relations knowledge",
+      "Project management",
+      "Data analysis and interpretation"
+    ],
+    "preferred_skills": [
+      "Experience with te reo Māori or tikanga Māori",
+      "Knowledge of immigration policy or workforce planning",
+      "Familiarity with New Zealand employment law",
+      "Experience using Stats NZ data and HLFS datasets",
+      "Understanding of Pacific community needs in the labour market"
+    ],
+    "qualifications": [
+      "Tertiary qualification in Economics, Public Policy, Law, Social Sciences, or a related field",
+      "Postgraduate qualification preferred"
+    ],
+    "competencies": [
+      "Treaty of Waitangi commitment",
+      "Stakeholder engagement",
+      "Strategic thinking",
+      "Delivering results",
+      "Leading and developing others",
+      "Political acumen",
+      "Bicultural capability",
+      "Written and oral communication excellence"
+    ],
+    "created_at": "2026-03-20T09:00:00"
+  },
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "title": "ICT Project Manager",
+    "organisation": "Auckland Council",
+    "department": "Digital Services and ICT",
+    "location": "Auckland",
+    "salary_band": "Band 5: $110,000 - $130,000",
+    "employment_type": "fixed-term",
+    "closing_date": "2026-05-01T23:59:00",
+    "status": "OPEN",
+    "overview": "Auckland Council is New Zealand's largest local authority, serving over 1.7 million residents. We are seeking an experienced ICT Project Manager to lead the delivery of critical digital transformation projects across our organisation. This fixed-term role (18 months) will sit within our Digital Services and ICT group, reporting to the Programme Manager. You will be responsible for managing multiple concurrent projects including the migration of legacy systems, implementation of citizen-facing digital services, and integration of systems following the amalgamation of legacy council entities. You will be expected to bring strong delivery credentials, a collaborative approach, and an appreciation of the obligations Auckland Council holds to mana whenua and the communities of Tāmaki Makaurau.",
+    "responsibilities": [
+      "Lead end-to-end delivery of ICT projects from initiation through to post-implementation review using PRINCE2 or Agile methodologies",
+      "Manage project budgets, schedules, risks, and issues across a portfolio of concurrent projects",
+      "Coordinate with internal business units, external vendors, and technology partners to ensure integrated delivery",
+      "Prepare project status reports, steering group packs, and executive updates",
+      "Engage with mana whenua representatives to ensure digital projects reflect Auckland Council's obligations under the Local Government (Auckland Council) Act",
+      "Drive vendor performance management and contract compliance",
+      "Support the transition to cloud-based infrastructure including M365 and Azure environments",
+      "Facilitate workshops with business stakeholders to define requirements and acceptance criteria",
+      "Ensure projects meet Council's information security and privacy by design standards"
+    ],
+    "required_skills": [
+      "ICT project management (5+ years)",
+      "Agile and waterfall delivery methodologies",
+      "Risk and issue management",
+      "Budget management and financial reporting",
+      "Vendor management",
+      "Stakeholder communication and reporting",
+      "Business requirements analysis",
+      "Change management"
+    ],
+    "preferred_skills": [
+      "Experience with Microsoft Azure or AWS cloud migrations",
+      "Local government sector experience",
+      "Knowledge of ITIL service management framework",
+      "Familiarity with GIS or spatial data systems",
+      "Experience with procurement under the Government Rules of Sourcing",
+      "Te reo Māori or experience working with mana whenua"
+    ],
+    "qualifications": [
+      "Bachelor's degree in Information Technology, Computer Science, or related field",
+      "PRINCE2 Practitioner or PMP certification",
+      "Agile certification (SAFe, Scrum Master, or equivalent) preferred"
+    ],
+    "competencies": [
+      "Treaty of Waitangi commitment",
+      "Stakeholder engagement",
+      "Delivering results",
+      "Commercial acumen",
+      "Risk management",
+      "Collaborative leadership",
+      "Continuous improvement mindset",
+      "Bicultural capability"
+    ],
+    "created_at": "2026-03-25T09:00:00"
+  },
+  {
+    "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+    "title": "Community Services Manager",
+    "organisation": "Canterbury District Health Board",
+    "department": "Allied Health and Community Services",
+    "location": "Christchurch",
+    "salary_band": "Band 6: $120,000 - $145,000",
+    "employment_type": "permanent",
+    "closing_date": "2026-05-20T23:59:00",
+    "status": "OPEN",
+    "overview": "Canterbury District Health Board (CDHB) is committed to improving the health and wellbeing of the people of Canterbury and the West Coast. We are seeking a Community Services Manager to lead a team of community health professionals delivering integrated, wrap-around services across the Canterbury region. This role is central to our strategy of shifting care from hospitals into community settings. You will bring strong leadership, clinical governance understanding, and a commitment to equity — particularly for Māori, Pasifika, and disabled communities. You will work closely with Te Whatu Ora, NGO partners, primary health organisations, and kaupapa Māori health providers to ensure our services are accessible, whānau-centred, and culturally responsive. This is a senior leadership role with direct responsibility for a team of approximately 45 FTE.",
+    "responsibilities": [
+      "Provide strong operational and strategic leadership to community health teams across multiple Christchurch and Canterbury locations",
+      "Drive service delivery excellence, clinical quality, and patient safety in community settings",
+      "Develop and maintain partnerships with Māori health providers, NGOs, primary care, and social services",
+      "Lead workforce planning, recruitment, and professional development for a multi-disciplinary team",
+      "Oversee budget management and financial accountability for the community services portfolio",
+      "Champion equity-focused service design to address health disparities for Māori, Pasifika, and other priority populations",
+      "Contribute to the CDHB Strategic Plan and system-level change across the Canterbury health system",
+      "Ensure compliance with Health and Disability Commissioner standards, HDSS frameworks, and Te Whatu Ora requirements",
+      "Represent CDHB in regional forums, sector working groups, and community engagement processes",
+      "Embed tikanga Māori and a te ao Māori approach into service delivery and team culture"
+    ],
+    "required_skills": [
+      "Senior leadership in health or community services (5+ years)",
+      "Budget and financial management",
+      "Clinical governance and quality improvement",
+      "Workforce development and performance management",
+      "Partnership and relationship management with Māori organisations",
+      "Strategic planning and service development",
+      "Change management and organisational development"
+    ],
+    "preferred_skills": [
+      "Clinical background in nursing, allied health, or social work",
+      "Knowledge of Canterbury health system and Te Whatu Ora structure",
+      "Experience with kaupapa Māori health models",
+      "Understanding of Whānau Ora principles",
+      "Familiarity with ACC and MSD interface in community services",
+      "Te reo Māori proficiency"
+    ],
+    "qualifications": [
+      "Relevant tertiary qualification in Health Management, Nursing, Social Work, Allied Health, or related field",
+      "Postgraduate qualification in Health Management or Leadership preferred",
+      "Current New Zealand practising certificate (if clinically registered)"
+    ],
+    "competencies": [
+      "Treaty of Waitangi commitment",
+      "Bicultural capability",
+      "Stakeholder engagement",
+      "Delivering results",
+      "Leading and developing others",
+      "Equity and inclusion leadership",
+      "System thinking",
+      "Whānau-centred service design"
+    ],
+    "created_at": "2026-04-01T09:00:00"
+  }
+]
