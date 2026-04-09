@@ -52,7 +52,14 @@ def test_save_job_calls_upsert() -> None:
         result = save_job({"title": "Policy Analyst"})
 
     mock_client.table.assert_called_once_with("jobs")
-    mock_chain.upsert.assert_called_once_with({"title": "Policy Analyst"}, on_conflict="id")
+    # _sanitise_job transforms the dict before upsert — check it was called with
+    # the expected table and that upsert was called (exact dict shape validated by
+    # _sanitise_job unit tests elsewhere)
+    assert mock_chain.upsert.called
+    call_kwargs = mock_chain.upsert.call_args
+    saved_dict = call_kwargs[0][0]
+    assert saved_dict["title"] == "Policy Analyst"
+    assert call_kwargs[1] == {"on_conflict": "id"}
     assert result == saved
 
 
