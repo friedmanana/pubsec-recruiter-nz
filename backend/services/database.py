@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
+import httpx
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from supabase import create_client  # type: ignore[attr-defined]
@@ -14,6 +15,23 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 if TYPE_CHECKING:
     from supabase._sync.client import SyncClient as Client  # noqa: F401
+
+# ---------------------------------------------------------------------------
+# Force HTTP/1.1 for PostgREST client
+#
+# postgrest-py >= 0.16 creates its internal httpx.Client with http2=True.
+# On Render free tier this triggers StreamReset (HTTP/2 PROTOCOL_ERROR) on
+# every request to Supabase. Patching _get_sync_session forces HTTP/1.1.
+# ---------------------------------------------------------------------------
+try:
+    import postgrest._sync.client as _pg_sync  # type: ignore[import]
+
+    def _http1_sync_session(self: Any, headers: Any) -> httpx.Client:  # noqa: ANN001
+        return httpx.Client(headers=dict(headers), follow_redirects=True, http2=False)
+
+    _pg_sync.SyncPostgrestClient._get_sync_session = _http1_sync_session  # type: ignore[attr-defined]
+except Exception:  # noqa: BLE001
+    pass  # if postgrest isn't installed or API changed, proceed without patch
 
 # ---------------------------------------------------------------------------
 # Settings
