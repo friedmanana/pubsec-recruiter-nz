@@ -203,6 +203,28 @@ def screen_candidates(job_id: str) -> ScreeningResponse:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/jobs/{job_id}/results — all screening results (all recommendations)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{job_id}/results")
+def get_all_results(job_id: str) -> list[dict]:
+    """Return all screening results for a job (all recommendations), ordered by score."""
+    try:
+        job = db.get_job(job_id)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+
+    try:
+        return db.get_all_results_for_job(job_id)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+
+
+# ---------------------------------------------------------------------------
 # POST /api/v1/jobs/{job_id}/upload-cvs — screen uploaded CVs and persist
 # ---------------------------------------------------------------------------
 

@@ -32,6 +32,9 @@ export const api = {
   getShortlist: (jobId: string) =>
     fetchAPI<ScreeningResult[]>(`/api/v1/jobs/${jobId}/shortlist`),
 
+  getAllResults: (jobId: string) =>
+    fetchAPI<ScreeningResult[]>(`/api/v1/jobs/${jobId}/results`),
+
   sourceAndScreen: async (jobId: string) => {
     await fetchAPI(`/api/v1/jobs/${jobId}/source`, {
       method: 'POST',

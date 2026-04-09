@@ -47,12 +47,12 @@ export default function JobDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [jobData, shortlistData] = await Promise.all([
+      const [jobData, allResults] = await Promise.all([
         api.getJob(id),
-        api.getShortlist(id),
+        api.getAllResults(id),
       ])
       setJob(jobData)
-      setCandidates(shortlistData)
+      setCandidates(allResults)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
