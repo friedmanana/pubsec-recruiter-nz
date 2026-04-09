@@ -131,6 +131,17 @@ def _sanitise_job(job_dict: dict) -> dict:
     if raw_title:
         job["title"] = raw_title
 
+    # Truncate overview if it looks like the raw JD was dumped in (> 500 chars)
+    # Keep only the first meaningful paragraph (up to 400 chars)
+    raw_overview = str(job.get("overview", "")).strip()
+    if len(raw_overview) > 500:
+        # Take first non-empty paragraph only
+        first_para = next(
+            (p.strip() for p in raw_overview.split("\n") if len(p.strip()) > 30),
+            raw_overview[:400],
+        )
+        job["overview"] = first_para[:400]
+
     # required NOT NULL fields with defaults
     for field, default in (
         ("title", "Untitled Role"),
