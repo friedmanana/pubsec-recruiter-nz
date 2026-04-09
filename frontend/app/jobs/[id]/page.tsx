@@ -39,7 +39,7 @@ export default function JobDetailPage() {
   const [candidates, setCandidates] = useState<ScreeningResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<TabKey>('shortlisted')
+  const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [rerunning, setRerunning] = useState(false)
   const [sourcingStatus, setSourcingStatus] = useState<string | null>(null)
 
@@ -86,9 +86,9 @@ export default function JobDetailPage() {
   const allCandidates = candidates
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
-    { key: 'shortlisted', label: 'Shortlisted', count: shortlisted.length },
-    { key: 'second_round', label: 'Second Round', count: secondRound.length },
     { key: 'all', label: 'All Candidates', count: allCandidates.length },
+    { key: 'second_round', label: 'Second Round', count: secondRound.length },
+    { key: 'shortlisted', label: 'Shortlisted', count: shortlisted.length },
   ]
 
   const activeList =
@@ -339,26 +339,41 @@ export default function JobDetailPage() {
           {activeList.length === 0 ? (
             <div className="bg-white rounded-lg border border-slate-200">
               <EmptyState
-                title="No candidates yet"
-                description="Run sourcing and screening to find and evaluate candidates for this role."
+                title={activeTab === 'all' ? 'No candidates yet' : activeTab === 'second_round' ? 'No second-round candidates' : 'No shortlisted candidates'}
+                description={
+                  activeTab === 'all'
+                    ? 'Upload CVs to screen candidates, or run LinkedIn sourcing to find candidates automatically.'
+                    : 'Candidates screened as this tier will appear here.'
+                }
               />
-              <div className="pb-6 flex justify-center">
-                <button
-                  onClick={handleRerun}
-                  disabled={rerunning}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                >
-                  {rerunning ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Searching… (30–60s)
-                    </>
-                  ) : 'Run Sourcing & Screening'}
-                </button>
-              </div>
+              {activeTab === 'all' && (
+                <div className="pb-6 flex justify-center gap-3">
+                  <Link
+                    href={`/jobs/${id}/upload`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload CVs
+                  </Link>
+                  <button
+                    onClick={handleRerun}
+                    disabled={rerunning}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    {rerunning ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Searching… (30–60s)
+                      </>
+                    ) : 'Run LinkedIn Sourcing'}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">

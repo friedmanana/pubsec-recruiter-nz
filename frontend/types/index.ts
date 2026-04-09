@@ -42,18 +42,23 @@ export interface ScreeningResult {
   overall_score: number
   skill_match_score: number
   experience_score: number
+  qualification_score: number
   nz_fit_score: number
   recommendation: Recommendation
   recommendation_reason: string
   strengths: string[]
   concerns: string[]
   interview_flags: string[]
+  notes?: string
   // merged candidate fields
   full_name?: string
   current_title?: string
   current_organisation?: string
   location?: string
   linkedin_url?: string
+  years_experience?: number
+  skills?: string[]
+  summary?: string
 }
 
 export interface PipelineResult {

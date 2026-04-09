@@ -15,6 +15,17 @@ const recommendationConfig: Record<
   DECLINE: { label: 'Decline', className: 'bg-red-100 text-red-800' },
 }
 
+function SubScore({ label, score }: { label: string; score: number }) {
+  const color =
+    score >= 75 ? 'text-green-700' : score >= 55 ? 'text-yellow-700' : score >= 35 ? 'text-orange-600' : 'text-red-600'
+  return (
+    <span className="flex flex-col items-center gap-0.5">
+      <span className={`text-sm font-semibold ${color}`}>{Math.round(score)}</span>
+      <span className="text-xs text-slate-400 whitespace-nowrap">{label}</span>
+    </span>
+  )
+}
+
 export default function CandidateCard({ result }: CandidateCardProps) {
   const rec = recommendationConfig[result.recommendation] ?? {
     label: result.recommendation,
@@ -22,6 +33,12 @@ export default function CandidateCard({ result }: CandidateCardProps) {
   }
 
   const displayStrengths = (result.strengths ?? []).slice(0, 3)
+  const displayConcerns = (result.concerns ?? []).slice(0, 2)
+
+  // Only show non-"Unknown" / non-empty subtitle parts
+  const subtitleParts = [result.current_title, result.current_organisation].filter(
+    (v) => v && v !== 'Unknown'
+  )
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -33,14 +50,12 @@ export default function CandidateCard({ result }: CandidateCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-semibold text-slate-900 text-base leading-tight">
-                {result.full_name ?? 'Unknown Candidate'}
+                {result.full_name && result.full_name !== 'Unknown' ? result.full_name : 'Candidate'}
               </h3>
-              <p className="text-sm text-slate-600 mt-0.5">
-                {[result.current_title, result.current_organisation]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </p>
-              {result.location && (
+              {subtitleParts.length > 0 && (
+                <p className="text-sm text-slate-600 mt-0.5">{subtitleParts.join(' · ')}</p>
+              )}
+              {result.location && result.location !== 'New Zealand' && (
                 <p className="text-xs text-slate-500 mt-0.5">{result.location}</p>
               )}
             </div>
@@ -53,6 +68,13 @@ export default function CandidateCard({ result }: CandidateCardProps) {
         </div>
       </div>
 
+      {/* Sub-scores */}
+      <div className="mt-3 flex gap-4 border-t border-slate-100 pt-3">
+        <SubScore label="Skills" score={result.skill_match_score ?? 0} />
+        <SubScore label="Experience" score={result.experience_score ?? 0} />
+        <SubScore label="NZ Fit" score={result.nz_fit_score ?? 0} />
+      </div>
+
       {/* Reason */}
       {result.recommendation_reason && (
         <p className="mt-3 text-sm text-slate-600 leading-relaxed">
@@ -62,15 +84,35 @@ export default function CandidateCard({ result }: CandidateCardProps) {
 
       {/* Strengths */}
       {displayStrengths.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {displayStrengths.map((strength, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700"
-            >
-              {strength}
-            </span>
-          ))}
+        <div className="mt-3">
+          <p className="text-xs font-medium text-slate-500 mb-1.5">Strengths</p>
+          <div className="flex flex-wrap gap-1.5">
+            {displayStrengths.map((strength, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700"
+              >
+                {strength}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Concerns */}
+      {displayConcerns.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs font-medium text-slate-500 mb-1.5">Concerns</p>
+          <div className="flex flex-wrap gap-1.5">
+            {displayConcerns.map((concern, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-50 text-red-700"
+              >
+                {concern}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
