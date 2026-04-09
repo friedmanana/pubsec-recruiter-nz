@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,9 +17,18 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://*.vercel.app",
+]
+# Allow additional origins from env var (comma-separated)
+extra = os.getenv("ALLOWED_ORIGINS", "")
+if extra:
+    ALLOWED_ORIGINS.extend([o.strip() for o in extra.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://*.vercel.app"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
