@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
-from supabase import Client, create_client
+from supabase import create_client
+
+if TYPE_CHECKING:
+    from supabase._sync.client import SyncClient as Client  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Settings
@@ -24,7 +29,7 @@ settings = Settings()
 # ---------------------------------------------------------------------------
 
 
-def get_client() -> Client:
+def get_client() -> Any:
     """Return a configured Supabase client.
 
     Raises:
