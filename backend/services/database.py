@@ -1,0 +1,298 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
+from supabase import create_client  # type: ignore[attr-defined]
+
+if TYPE_CHECKING:
+    from supabase._sync.client import SyncClient as Client  # noqa: F401
+
+# ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
+
+
+class Settings(BaseSettings):
+    supabase_url: str = ""
+    supabase_key: str = ""
+
+    model_config = ConfigDict(env_file=".env", extra="ignore")
+
+
+settings = Settings()
+
+
+# ---------------------------------------------------------------------------
+# Client factory
+# ---------------------------------------------------------------------------
+
+
+def get_client() -> Any:
+    """Return a configured Supabase client.
+
+    Raises:
+        RuntimeError: if SUPABASE_URL or SUPABASE_KEY environment variables
+                      are not set.
+    """
+    if not settings.supabase_url or not settings.supabase_key:
+        raise RuntimeError(
+            "Supabase not configured. "
+            "Please set SUPABASE_URL and SUPABASE_KEY environment variables."
+        )
+    return create_client(settings.supabase_url, settings.supabase_key)
+
+
+# ---------------------------------------------------------------------------
+# Jobs CRUD
+# ---------------------------------------------------------------------------
+
+
+def save_job(job_dict: dict) -> dict:
+    """Upsert a job record into the jobs table and return the saved record.
+
+    Args:
+        job_dict: A dict matching the jobs table schema.  If ``id`` is present
+                  the row will be updated; otherwise a new row is inserted.
+
+    Returns:
+        The saved record dict (including any server-generated fields).
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("jobs")
+        .upsert(job_dict, on_conflict="id")
+        .execute()
+    )
+    return response.data[0]
+
+
+def get_job(job_id: str) -> dict | None:
+    """Fetch a single job by its UUID.
+
+    Args:
+        job_id: The job's UUID string.
+
+    Returns:
+        The job dict, or ``None`` if not found.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("jobs")
+        .select("*")
+        .eq("id", job_id)
+        .execute()
+    )
+    if response.data:
+        return response.data[0]
+    return None
+
+
+def list_jobs(status: str | None = None) -> list[dict]:
+    """Return all jobs, optionally filtered by status.
+
+    Args:
+        status: Optional job status string (e.g. ``'OPEN'``).
+
+    Returns:
+        A list of job dicts ordered by ``created_at`` descending.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    query = client.table("jobs").select("*").order("created_at", desc=True)
+    if status is not None:
+        query = query.eq("status", status)
+    response = query.execute()
+    return response.data
+
+
+def update_job_status(job_id: str, status: str) -> dict:
+    """Update the status field of a job.
+
+    Args:
+        job_id: The job's UUID string.
+        status: The new status value (must pass the DB CHECK constraint).
+
+    Returns:
+        The updated job dict.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("jobs")
+        .update({"status": status})
+        .eq("id", job_id)
+        .execute()
+    )
+    return response.data[0]
+
+
+# ---------------------------------------------------------------------------
+# Candidates CRUD
+# ---------------------------------------------------------------------------
+
+
+def save_candidate(candidate_dict: dict) -> dict:
+    """Upsert a candidate record and return the saved record.
+
+    Args:
+        candidate_dict: A dict matching the candidates table schema.
+
+    Returns:
+        The saved record dict.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("candidates")
+        .upsert(candidate_dict, on_conflict="id")
+        .execute()
+    )
+    return response.data[0]
+
+
+def get_candidate(candidate_id: str) -> dict | None:
+    """Fetch a single candidate by UUID.
+
+    Args:
+        candidate_id: The candidate's UUID string.
+
+    Returns:
+        The candidate dict, or ``None`` if not found.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("candidates")
+        .select("*")
+        .eq("id", candidate_id)
+        .execute()
+    )
+    if response.data:
+        return response.data[0]
+    return None
+
+
+def list_candidates_for_job(job_id: str) -> list[dict]:
+    """Return all candidates linked to a job via screening_results.
+
+    Args:
+        job_id: The job's UUID string.
+
+    Returns:
+        A list of candidate dicts (joined through screening_results).
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("screening_results")
+        .select("candidate_id, candidates(*)")
+        .eq("job_id", job_id)
+        .execute()
+    )
+    candidates = []
+    for row in response.data:
+        if row.get("candidates"):
+            candidates.append(row["candidates"])
+    return candidates
+
+
+# ---------------------------------------------------------------------------
+# Screening results CRUD
+# ---------------------------------------------------------------------------
+
+
+def save_screening_result(result_dict: dict) -> dict:
+    """Upsert a screening result (job_id + candidate_id is unique).
+
+    Args:
+        result_dict: A dict matching the screening_results table schema.
+
+    Returns:
+        The saved record dict.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("screening_results")
+        .upsert(result_dict, on_conflict="job_id,candidate_id")
+        .execute()
+    )
+    return response.data[0]
+
+
+def get_shortlist(job_id: str) -> list[dict]:
+    """Return shortlisted screening results for a job, joined with candidate info.
+
+    Results are ordered by ``overall_score`` descending.
+
+    Args:
+        job_id: The job's UUID string.
+
+    Returns:
+        A list of dicts each containing screening result fields merged with
+        the candidate's profile fields.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("screening_results")
+        .select("*, candidates(*)")
+        .eq("job_id", job_id)
+        .eq("recommendation", "SHORTLIST")
+        .order("overall_score", desc=True)
+        .execute()
+    )
+    results = []
+    for row in response.data:
+        candidate_info = row.pop("candidates", {}) or {}
+        results.append({**candidate_info, **row})
+    return results
+
+
+def get_all_results_for_job(job_id: str) -> list[dict]:
+    """Return all screening results for a job ordered by overall_score descending.
+
+    Args:
+        job_id: The job's UUID string.
+
+    Returns:
+        A list of screening result dicts joined with candidate info.
+
+    Raises:
+        RuntimeError: if Supabase is not configured.
+    """
+    client = get_client()
+    response = (
+        client.table("screening_results")
+        .select("*, candidates(*)")
+        .eq("job_id", job_id)
+        .order("overall_score", desc=True)
+        .execute()
+    )
+    results = []
+    for row in response.data:
+        candidate_info = row.pop("candidates", {}) or {}
+        results.append({**candidate_info, **row})
+    return results
