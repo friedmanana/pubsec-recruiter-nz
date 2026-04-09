@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
-from supabase import create_client
+from supabase import create_client  # type: ignore[attr-defined]
 
 if TYPE_CHECKING:
     from supabase._sync.client import SyncClient as Client  # noqa: F401
