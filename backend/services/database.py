@@ -447,3 +447,26 @@ def clear_screening_results(job_id: str) -> int:
         .execute()
     )
     return len(response.data)
+
+
+@_retryable
+def update_result_recommendation(result_id: str, recommendation: str) -> dict:
+    """Update the recommendation for a single screening result (manual override)."""
+    client = get_client()
+    response = (
+        client.table("screening_results")
+        .update({"recommendation": recommendation})
+        .eq("id", result_id)
+        .execute()
+    )
+    if not response.data:
+        raise RuntimeError(f"Result '{result_id}' not found.")
+    return response.data[0]
+
+
+@_retryable
+def delete_result(result_id: str) -> bool:
+    """Delete a single screening result by ID."""
+    client = get_client()
+    client.table("screening_results").delete().eq("id", result_id).execute()
+    return True

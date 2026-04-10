@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import type { Job, ScreeningResult, JobStatus } from '@/types'
+import type { Job, ScreeningResult, JobStatus, Recommendation } from '@/types'
 import CandidateCard from '@/components/CandidateCard'
+import CandidateDetailModal from '@/components/CandidateDetailModal'
 import EmptyState from '@/components/EmptyState'
-import ScoreBadge from '@/components/ScoreBadge'
 
 type TabKey = 'shortlisted' | 'second_round' | 'all'
 
@@ -42,6 +42,7 @@ export default function JobDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [rerunning, setRerunning] = useState(false)
   const [sourcingStatus, setSourcingStatus] = useState<string | null>(null)
+  const [selectedCandidate, setSelectedCandidate] = useState<ScreeningResult | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -78,6 +79,33 @@ export default function JobDetailPage() {
       setSourcingStatus(null)
     } finally {
       setRerunning(false)
+    }
+  }
+
+  const handleMove = async (resultId: string, recommendation: Recommendation) => {
+    // Optimistic update
+    setCandidates((prev) =>
+      prev.map((c) => (c.id === resultId ? { ...c, recommendation } : c))
+    )
+    if (selectedCandidate?.id === resultId) {
+      setSelectedCandidate((prev) => prev ? { ...prev, recommendation } : null)
+    }
+    try {
+      await api.updateResultRecommendation(id, resultId, recommendation)
+    } catch {
+      // Revert on failure
+      await loadData()
+    }
+  }
+
+  const handleDelete = async (resultId: string) => {
+    // Optimistic update
+    setCandidates((prev) => prev.filter((c) => c.id !== resultId))
+    if (selectedCandidate?.id === resultId) setSelectedCandidate(null)
+    try {
+      await api.deleteResult(id, resultId)
+    } catch {
+      await loadData()
     }
   }
 
@@ -131,6 +159,7 @@ export default function JobDetailPage() {
   const status = statusConfig[job.status] ?? { label: job.status, className: 'bg-slate-100 text-slate-600' }
 
   return (
+    <>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back link */}
       <Link
@@ -381,7 +410,13 @@ export default function JobDetailPage() {
                 .slice()
                 .sort((a, b) => b.overall_score - a.overall_score)
                 .map((result) => (
-                  <CandidateCard key={result.id} result={result} />
+                  <CandidateCard
+                    key={result.id}
+                    result={result}
+                    onClick={setSelectedCandidate}
+                    onMove={handleMove}
+                    onDelete={handleDelete}
+                  />
                 ))}
             </div>
           )}
@@ -405,5 +440,16 @@ export default function JobDetailPage() {
         </div>
       </div>
     </div>
+
+    {/* Candidate detail modal */}
+    {selectedCandidate && (
+      <CandidateDetailModal
+        result={selectedCandidate}
+        onClose={() => setSelectedCandidate(null)}
+        onMove={handleMove}
+        onDelete={handleDelete}
+      />
+    )}
+    </>
   )
 }

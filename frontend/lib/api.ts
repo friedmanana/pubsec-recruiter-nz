@@ -51,4 +51,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ cv_texts: cvTexts }),
     }),
+
+  updateResultRecommendation: (jobId: string, resultId: string, recommendation: string) =>
+    fetchAPI(`/api/v1/jobs/${jobId}/results/${resultId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ recommendation }),
+    }),
+
+  deleteResult: (jobId: string, resultId: string) =>
+    fetchAPI(`/api/v1/jobs/${jobId}/results/${resultId}`, {
+      method: 'DELETE',
+    }),
 }

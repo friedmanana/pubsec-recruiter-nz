@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+
+class UpdateRecommendationRequest(BaseModel):
+    recommendation: str
 
 from agents.candidate_screener_agent import screen_batch
 from agents.candidate_sourcing_agent import run_sourcing
@@ -215,6 +220,38 @@ def clear_results(job_id: str) -> dict:
     except RuntimeError as exc:
         raise _handle_runtime_error(exc) from exc
     return {"deleted": deleted}
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/v1/jobs/{job_id}/results/{result_id} — manual recommendation override
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/{job_id}/results/{result_id}")
+def update_result(job_id: str, result_id: str, body: UpdateRecommendationRequest) -> dict:
+    """Manually override the recommendation for a single screening result."""
+    valid = {"SHORTLIST", "SECOND_ROUND", "HOLD", "DECLINE"}
+    if body.recommendation not in valid:
+        raise HTTPException(status_code=422, detail=f"recommendation must be one of {valid}")
+    try:
+        return db.update_result_recommendation(result_id, body.recommendation)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/v1/jobs/{job_id}/results/{result_id} — delete single result
+# ---------------------------------------------------------------------------
+
+
+@router.delete("/{job_id}/results/{result_id}")
+def delete_result(job_id: str, result_id: str) -> dict:
+    """Delete a single screening result (remove candidate from all views)."""
+    try:
+        db.delete_result(result_id)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+    return {"deleted": True}
 
 
 # ---------------------------------------------------------------------------
