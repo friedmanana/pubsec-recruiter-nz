@@ -80,7 +80,8 @@ def _parse_cv_text(cv_text: str, index: int = 0) -> dict:
         # Collect items inside the skills section or bullet/comma items anywhere
         if _skill_section and line.startswith(("•", "-", "*", "·")):
             skills.append(line.lstrip("•-*· ").strip())
-        elif _skill_section and "," in line and len(line) < 200:
+        elif _skill_section and "," in line:
+            # No length limit inside a dedicated skills section
             skills.extend(p.strip() for p in line.split(",") if p.strip())
         elif not _skill_section:
             if "," in line and len(line) < 200:
@@ -99,20 +100,29 @@ def _parse_cv_text(cv_text: str, index: int = 0) -> dict:
             years_experience = int(match.group(1))
             break
 
-    # Organisation — look for "at", "with", or common org keywords after a title
+    # Organisation — prefer lines with known public sector / org keywords,
+    # but exclude generic location lines like "Location: Wellington, New Zealand".
     current_organisation = ""
+    _org_keywords = ("ministry", "department", "council", "limited", "ltd", "mbie", "treasury",
+                     "health", "education", "justice", "defence", "corrections", "inland revenue",
+                     "te whatu", "acc ", "nzta", "crown", "authority", "commission", "office of")
     for line in lines:
         lower = line.lower()
-        if any(kw in lower for kw in ("ministry", "department", "council", "limited", "ltd", "nz ", "new zealand")):
+        if any(kw in lower for kw in _org_keywords) and not lower.startswith(("location", "address", "email", "phone")):
             current_organisation = line
             break
 
-    # Summary — first substantial paragraph (>50 chars)
-    summary = ""
+    # Summary — concatenate the first 500 characters of meaningful content so that
+    # treaty/bicultural keywords spread across multiple sentences are all captured.
+    summary_parts: list[str] = []
+    summary_len = 0
     for line in lines:
-        if len(line) > 50:
-            summary = line
-            break
+        if len(line) > 30 and summary_len < 500:
+            summary_parts.append(line)
+            summary_len += len(line)
+            if summary_len >= 500:
+                break
+    summary = " ".join(summary_parts)[:600]
 
     return {
         "full_name": full_name,
