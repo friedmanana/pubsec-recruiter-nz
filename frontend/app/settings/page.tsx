@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -18,29 +18,32 @@ function formatDate(iso: string | undefined) {
   } catch { return iso }
 }
 
-export default function SettingsPage() {
+// useSearchParams must be inside a Suspense boundary — isolate it here
+function SearchParamsBanner({ onBanner }: { onBanner: (b: { type: 'success' | 'error'; message: string }) => void }) {
   const searchParams = useSearchParams()
+  useEffect(() => {
+    const connected = searchParams.get('connected')
+    const email = searchParams.get('email')
+    const error = searchParams.get('error')
+    if (connected === 'google') {
+      onBanner({
+        type: 'success',
+        message: `Google Calendar connected${email ? ` as ${email}` : ''}. Bookings will now create calendar events automatically.`,
+      })
+    } else if (error) {
+      onBanner({ type: 'error', message: `Google authorisation failed: ${error}` })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+  return null
+}
+
+function SettingsPageInner() {
   const [gcalStatus, setGcalStatus] = useState<GoogleStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-
-  // Read query params set by the OAuth callback redirect
-  useEffect(() => {
-    const connected = searchParams.get('connected')
-    const email = searchParams.get('email')
-    const error = searchParams.get('error')
-
-    if (connected === 'google') {
-      setBanner({
-        type: 'success',
-        message: `Google Calendar connected${email ? ` as ${email}` : ''}. Bookings will now create calendar events automatically.`,
-      })
-    } else if (error) {
-      setBanner({ type: 'error', message: `Google authorisation failed: ${error}` })
-    }
-  }, [searchParams])
 
   // Load current status
   useEffect(() => {
@@ -76,6 +79,9 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <Suspense fallback={null}>
+        <SearchParamsBanner onBanner={setBanner} />
+      </Suspense>
       {/* Back */}
       <Link href="/" className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-8">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,5 +228,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
   )
 }
