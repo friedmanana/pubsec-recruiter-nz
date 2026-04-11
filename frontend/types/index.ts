@@ -52,6 +52,7 @@ export interface ScreeningResult {
   notes?: string
   // merged candidate fields
   full_name?: string
+  email?: string
   current_title?: string
   current_organisation?: string
   location?: string

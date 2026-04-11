@@ -114,7 +114,7 @@ def invite_batch(job_id: str, body: InviteBatchRequest) -> dict:
 
 _SAMPLE_CANDIDATE = {
     "id": "preview",
-    "full_name": "the candidate",
+    "full_name": "Alex Smith",
     "email": "candidate@example.com",
 }
 

@@ -21,6 +21,10 @@ from services.screening_service import _parse_cv_text, run_full_pipeline
 class UpdateRecommendationRequest(BaseModel):
     recommendation: str
 
+
+class UpdateCandidateEmailRequest(BaseModel):
+    email: str
+
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs-persistent"])
 
 
@@ -252,6 +256,20 @@ def delete_result(job_id: str, result_id: str) -> dict:
     except RuntimeError as exc:
         raise _handle_runtime_error(exc) from exc
     return {"deleted": True}
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/v1/jobs/candidates/{candidate_id}/email — update email address
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/candidates/{candidate_id}/email")
+def update_candidate_email(candidate_id: str, body: UpdateCandidateEmailRequest) -> dict:
+    """Update a candidate's email address."""
+    try:
+        return db.update_candidate_email(candidate_id, body.email.strip())
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
 
 
 # ---------------------------------------------------------------------------

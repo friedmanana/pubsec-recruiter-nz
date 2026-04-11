@@ -63,6 +63,13 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // --- Candidates ---
+  updateCandidateEmail: (candidateId: string, email: string) =>
+    fetchAPI(`/api/v1/jobs/candidates/${candidateId}/email`, {
+      method: 'PATCH',
+      body: JSON.stringify({ email }),
+    }),
+
   // --- Communications ---
   listComms: (jobId: string) =>
     fetchAPI<Communication[]>(`/api/v1/jobs/${jobId}/comms`),

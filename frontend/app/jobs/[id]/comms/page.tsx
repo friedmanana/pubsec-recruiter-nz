@@ -79,8 +79,8 @@ const TYPE_COLORS: Record<EmailType, string> = {
 }
 
 function PreviewModal({ type, subject, bodyHtml, recipients, slotCount, sending, onConfirm, onClose }: PreviewModalProps) {
-  const withEmail = recipients.filter((r) => !!(r as unknown as { email?: string }).email)
-  const noEmail = recipients.filter((r) => !(r as unknown as { email?: string }).email)
+  const withEmail = recipients.filter((r) => !!r.email)
+  const noEmail = recipients.filter((r) => !r.email)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -121,7 +121,7 @@ function PreviewModal({ type, subject, bodyHtml, recipients, slotCount, sending,
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
                   <div className="w-3 h-3 rounded-full bg-green-400" />
                 </div>
-                <span className="text-xs text-slate-400 ml-1">Preview — uses "the candidate" as placeholder name</span>
+                <span className="text-xs text-slate-400 ml-1">Preview — uses "Alex Smith" as placeholder name</span>
               </div>
               {/* Render HTML directly — links are non-clickable via pointer-events:none */}
               <div
@@ -163,7 +163,7 @@ function PreviewModal({ type, subject, bodyHtml, recipients, slotCount, sending,
 
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {recipients.map((r) => {
-                const email = (r as unknown as { email?: string }).email
+                const email = r.email
                 const name = r.full_name && r.full_name !== 'Unknown' ? r.full_name : 'Candidate'
                 return (
                   <div key={r.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
@@ -220,19 +220,36 @@ function PreviewModal({ type, subject, bodyHtml, recipients, slotCount, sending,
 // ---------------------------------------------------------------------------
 
 function CandidateRow({
-  result, selected, onToggle,
-}: { result: ScreeningResult; selected: boolean; onToggle: () => void }) {
+  result, selected, onToggle, onEmailSaved,
+}: { result: ScreeningResult; selected: boolean; onToggle: () => void; onEmailSaved: (id: string, email: string) => void }) {
   const name = result.full_name && result.full_name !== 'Unknown' ? result.full_name : 'Candidate'
-  const email = (result as unknown as { email?: string }).email
+  const email = result.email
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!draft.trim()) return
+    setSaving(true)
+    try {
+      await api.updateCandidateEmail(result.candidate_id, draft.trim())
+      onEmailSaved(result.candidate_id, draft.trim())
+      setEditing(false)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
   return (
-    <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg border transition-colors ${selected ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors ${selected ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
       <input
         type="checkbox"
         checked={selected}
         onChange={onToggle}
-        className="w-4 h-4 text-indigo-600 rounded border-slate-300 flex-shrink-0"
+        className="w-4 h-4 text-indigo-600 rounded border-slate-300 flex-shrink-0 cursor-pointer"
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggle}>
         <p className="text-sm font-medium text-slate-900 truncate">{name}</p>
         {result.current_title && result.current_title !== 'Unknown' && (
           <p className="text-xs text-slate-500 truncate">{result.current_title}</p>
@@ -240,12 +257,33 @@ function CandidateRow({
       </div>
       <div className="text-right flex-shrink-0">
         <span className="text-xs font-bold text-slate-600">{Math.round(result.overall_score)}</span>
-        {email
-          ? <p className="text-xs text-slate-400 truncate max-w-[120px]">{email}</p>
-          : <p className="text-xs text-amber-500">No email</p>
-        }
+        {email ? (
+          <p className="text-xs text-slate-400 truncate max-w-[140px]">{email}</p>
+        ) : editing ? (
+          <form onSubmit={handleSave} className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+            <input
+              autoFocus
+              type="email"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="email@example.com"
+              className="text-xs border border-slate-300 rounded px-1.5 py-0.5 w-36 focus:outline-none focus:border-indigo-400"
+            />
+            <button type="submit" disabled={saving} className="text-xs text-white bg-indigo-600 px-2 py-0.5 rounded hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? '…' : 'Save'}
+            </button>
+            <button type="button" onClick={() => setEditing(false)} className="text-xs text-slate-500 hover:text-slate-700">✕</button>
+          </form>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); setDraft(''); setEditing(true) }}
+            className="text-xs text-amber-600 hover:text-amber-800 hover:underline block mt-0.5"
+          >
+            + Add email
+          </button>
+        )}
       </div>
-    </label>
+    </div>
   )
 }
 
@@ -324,12 +362,13 @@ interface SendSectionProps {
   previewLoading: boolean
   extraContent?: React.ReactNode
   emptyMessage: string
+  onEmailSaved: (candidateId: string, email: string) => void
 }
 
 function SendSection({
   title, description, candidates, selected, onToggle,
   onSelectAll, onClearAll, actionLabel, actionColor,
-  onPreview, previewLoading, extraContent, emptyMessage,
+  onPreview, previewLoading, extraContent, emptyMessage, onEmailSaved,
 }: SendSectionProps) {
   return (
     <section className="bg-white border border-slate-200 rounded-xl p-5">
@@ -367,6 +406,7 @@ function SendSection({
                   result={c}
                   selected={selected.has(c.candidate_id)}
                   onToggle={() => onToggle(c.candidate_id)}
+                  onEmailSaved={onEmailSaved}
                 />
               ))}
             </div>
@@ -434,6 +474,11 @@ export default function CommsPage() {
       if (next.has(cid)) next.delete(cid); else next.add(cid)
       return next
     })
+  }
+
+  // Update email on a candidate locally after save
+  const handleEmailSaved = (candidateId: string, email: string) => {
+    setCandidates((prev) => prev.map((c) => c.candidate_id === candidateId ? { ...c, email } as unknown as ScreeningResult : c))
   }
 
   // Open preview modal — fetches rendered template from backend
@@ -556,6 +601,7 @@ export default function CommsPage() {
             onPreview={() => openPreview('REJECTION', declined.filter((c) => selectedDecline.has(c.candidate_id)))}
             previewLoading={previewLoading === 'REJECTION'}
             emptyMessage="No declined candidates."
+            onEmailSaved={handleEmailSaved}
           />
 
           {/* Shortlist */}
@@ -572,6 +618,7 @@ export default function CommsPage() {
             onPreview={() => openPreview('SHORTLIST_INVITE', shortlisted.filter((c) => selectedShortlist.has(c.candidate_id)))}
             previewLoading={previewLoading === 'SHORTLIST_INVITE'}
             emptyMessage="No shortlisted candidates."
+            onEmailSaved={handleEmailSaved}
           />
 
           {/* Phone screen */}
@@ -588,6 +635,7 @@ export default function CommsPage() {
             onPreview={() => openPreview('PHONE_SCREEN_INVITE', phoneScreenCandidates.filter((c) => selectedPhone.has(c.candidate_id)))}
             previewLoading={previewLoading === 'PHONE_SCREEN_INVITE'}
             emptyMessage="No shortlisted or second-round candidates."
+            onEmailSaved={handleEmailSaved}
             extraContent={availableSlots.length > 0 ? (
               <div className="mb-4">
                 <p className="text-xs font-medium text-slate-600 mb-2">

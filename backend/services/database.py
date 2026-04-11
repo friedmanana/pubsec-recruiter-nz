@@ -323,6 +323,21 @@ def get_candidate(candidate_id: str) -> dict | None:
 
 
 @_retryable
+def update_candidate_email(candidate_id: str, email: str) -> dict:
+    """Update the email address of a candidate."""
+    client = get_client()
+    response = (
+        client.table("candidates")
+        .update({"email": email})
+        .eq("id", candidate_id)
+        .execute()
+    )
+    if not response.data:
+        raise RuntimeError(f"Candidate '{candidate_id}' not found")
+    return response.data[0]
+
+
+@_retryable
 def list_candidates_for_job(job_id: str) -> list[dict]:
     """Return all candidates linked to a job via screening_results.
 
