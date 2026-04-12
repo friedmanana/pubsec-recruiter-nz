@@ -736,7 +736,7 @@ export default function CommsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {comms.map((comm) => {
+                  {comms.filter((c) => c.type !== 'BOOKING_CONFIRMATION').map((comm) => {
                     // Find a booking confirmation for same candidate (if this is a phone screen invite)
                     const booking = comm.type === 'PHONE_SCREEN_INVITE'
                       ? comms.find((c) => c.type === 'BOOKING_CONFIRMATION' && c.candidate_id === comm.candidate_id)
