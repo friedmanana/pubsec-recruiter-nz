@@ -257,9 +257,7 @@ function CandidateRow({
       </div>
       <div className="text-right flex-shrink-0">
         <span className="text-xs font-bold text-slate-600">{Math.round(result.overall_score)}</span>
-        {email ? (
-          <p className="text-xs text-slate-400 truncate max-w-[140px]">{email}</p>
-        ) : editing ? (
+        {editing ? (
           <form onSubmit={handleSave} className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
             <input
               autoFocus
@@ -274,6 +272,14 @@ function CandidateRow({
             </button>
             <button type="button" onClick={() => setEditing(false)} className="text-xs text-slate-500 hover:text-slate-700">✕</button>
           </form>
+        ) : email ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); setDraft(email); setEditing(true) }}
+            className="text-xs text-slate-400 hover:text-indigo-600 truncate max-w-[140px] block mt-0.5 hover:underline"
+            title="Click to edit"
+          >
+            {email}
+          </button>
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); setDraft(''); setEditing(true) }}
