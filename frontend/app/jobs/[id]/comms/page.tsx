@@ -732,20 +732,56 @@ export default function CommsPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Type</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Sent</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Response</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {comms.map((comm) => (
-                    <tr key={comm.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-800">{comm.full_name || 'Candidate'}</p>
-                        {comm.email && <p className="text-xs text-slate-400">{comm.email}</p>}
-                      </td>
-                      <td className="px-4 py-3"><TypeLabel type={comm.type} /></td>
-                      <td className="px-4 py-3 text-slate-500">{formatDT(comm.sent_at)}</td>
-                      <td className="px-4 py-3"><StatusPill status={comm.status} /></td>
-                    </tr>
-                  ))}
+                  {comms.map((comm) => {
+                    // Find a booking confirmation for same candidate (if this is a phone screen invite)
+                    const booking = comm.type === 'PHONE_SCREEN_INVITE'
+                      ? comms.find((c) => c.type === 'BOOKING_CONFIRMATION' && c.candidate_id === comm.candidate_id)
+                      : null
+                    return (
+                      <tr key={comm.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-slate-800">{comm.full_name || 'Candidate'}</p>
+                          {comm.email && <p className="text-xs text-slate-400">{comm.email}</p>}
+                        </td>
+                        <td className="px-4 py-3"><TypeLabel type={comm.type} /></td>
+                        <td className="px-4 py-3 text-slate-500">{formatDT(comm.sent_at)}</td>
+                        <td className="px-4 py-3"><StatusPill status={comm.status} /></td>
+                        <td className="px-4 py-3">
+                          {comm.type === 'PHONE_SCREEN_INVITE' ? (
+                            booking ? (
+                              <div>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Booked
+                                </span>
+                                {booking.booked_slot_starts_at && (
+                                  <p className="text-xs text-slate-500 mt-0.5">{formatDT(booking.booked_slot_starts_at)}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                Awaiting
+                              </span>
+                            )
+                          ) : comm.type === 'BOOKING_CONFIRMATION' ? (
+                            <div>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                ✓ Confirmed
+                              </span>
+                              {comm.booked_slot_starts_at && (
+                                <p className="text-xs text-slate-500 mt-0.5">{formatDT(comm.booked_slot_starts_at)}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

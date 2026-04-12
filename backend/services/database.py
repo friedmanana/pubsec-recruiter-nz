@@ -578,11 +578,11 @@ def save_communication(comm_dict: dict) -> dict:
 
 @_retryable
 def list_communications(job_id: str) -> list[dict]:
-    """Return all communications for a job with basic candidate info, newest first."""
+    """Return all communications for a job with candidate + slot info, newest first."""
     client = get_client()
     response = (
         client.table("communications")
-        .select("*, candidates(full_name, email)")
+        .select("*, candidates(full_name, email), interview_slots(starts_at, ends_at)")
         .eq("job_id", job_id)
         .order("created_at", desc=True)
         .execute()
@@ -590,7 +590,12 @@ def list_communications(job_id: str) -> list[dict]:
     results = []
     for row in response.data:
         candidate_info = row.pop("candidates", {}) or {}
-        results.append({**candidate_info, **row})
+        slot_info = row.pop("interview_slots", {}) or {}
+        merged = {**candidate_info, **row}
+        if slot_info.get("starts_at"):
+            merged["booked_slot_starts_at"] = slot_info["starts_at"]
+            merged["booked_slot_ends_at"] = slot_info.get("ends_at")
+        results.append(merged)
     return results
 
 

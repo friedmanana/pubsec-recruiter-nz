@@ -109,6 +109,9 @@ export interface Communication {
   // merged candidate fields
   full_name?: string
   email?: string
+  // booking confirmation slot info
+  booked_slot_starts_at?: string | null
+  booked_slot_ends_at?: string | null
 }
 
 export interface InterviewSlot {
