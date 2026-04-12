@@ -170,9 +170,6 @@ The Recruitment Team
     body_html = f"""<!DOCTYPE html>
 <html lang="en">
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#333;">
-  <div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:14px 18px;border-radius:4px;margin-bottom:20px;">
-    <strong style="color:#1e40af;">Phone Screening Invitation</strong>
-  </div>
   <p>Kia ora {name},</p>
   <p>Congratulations — we would like to invite you to a <strong>phone screening interview</strong> for the <strong>{title}</strong> position at {org}.</p>
   <p>The phone screen will take approximately <strong>30 minutes</strong>. It is an opportunity for us to learn more about your experience and for you to ask questions about the role.</p>
