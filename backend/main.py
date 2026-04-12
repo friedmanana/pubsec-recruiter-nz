@@ -12,6 +12,10 @@ from api.routes.integrations import router as integrations_router
 from api.routes.jobs import router as jobs_router
 from api.routes.slots import router as slots_router
 from api.schemas import HealthResponse
+from db.migrate import run_migrations
+
+# Run DB migrations on every startup — safe/idempotent, skips already-applied files
+run_migrations()
 
 app = FastAPI(
     title="PubSec Recruiter NZ",
