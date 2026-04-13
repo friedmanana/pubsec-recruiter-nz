@@ -132,3 +132,41 @@ export interface BookingInfo {
   slots: InterviewSlot[]
   expires_at: string
 }
+
+// --- Candidate Portal ---
+export interface CandidateProfile {
+  id: string
+  full_name: string
+  email: string
+  created_at: string
+}
+
+export type ApplicationStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETE'
+
+export interface JobApplication {
+  id: string
+  candidate_profile_id: string
+  job_title: string
+  company: string
+  job_description_text: string
+  status: ApplicationStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface CvDocument {
+  id: string
+  application_id: string
+  type: 'ORIGINAL' | 'ENHANCED'
+  content_text: string
+  content_html: string
+  created_at: string
+}
+
+export interface CoverLetter {
+  id: string
+  application_id: string
+  content_text: string
+  content_html: string
+  created_at: string
+}

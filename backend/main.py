@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.booking import router as booking_router
+from api.routes.candidate import router as candidate_router
 from api.routes.comms import router as comms_router
 from api.routes.db_jobs import router as db_jobs_router
 from api.routes.integrations import router as integrations_router
@@ -49,6 +50,7 @@ app.include_router(comms_router)
 app.include_router(slots_router)
 app.include_router(booking_router)
 app.include_router(integrations_router)
+app.include_router(candidate_router)
 
 
 @app.get("/health", response_model=HealthResponse)

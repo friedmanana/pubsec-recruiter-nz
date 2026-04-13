@@ -1,0 +1,140 @@
+"""CV enhancement and cover letter generation for NZ public sector candidates."""
+from __future__ import annotations
+
+import re
+
+
+def _call_llm(prompt: str) -> str:
+    """Call the LLM via strands Agent."""
+    try:
+        from strands import Agent  # type: ignore[import]
+
+        agent = Agent(
+            system_prompt=(
+                "You are an expert NZ public sector career coach and CV writer. "
+                "You help candidates tailor their CVs and cover letters for NZ government roles. "
+                "You understand NZ public sector culture, Te Tiriti o Waitangi obligations, "
+                "the NZ public service values, and demonstrated competency frameworks. "
+                "Write in clear, professional New Zealand English. Be specific and avoid clichés."
+            )
+        )
+        result = agent(prompt)
+        if hasattr(result, "message"):
+            content = result.message.get("content", [])
+            if isinstance(content, list):
+                return " ".join(
+                    c.get("text", "") for c in content if c.get("type") == "text"
+                )
+            return str(content)
+        return str(result)
+    except Exception as exc:
+        raise RuntimeError(f"LLM call failed: {exc}") from exc
+
+
+def enhance_cv(
+    cv_text: str,
+    job_title: str,
+    company: str,
+    job_description: str,
+) -> tuple[str, str]:
+    """Enhance a CV for a specific role. Returns (enhanced_text, enhanced_html)."""
+    has_jd = bool(job_description.strip())
+
+    prompt = f"""Enhance and tailor the following CV for a {job_title} role{f' at {company}' if company else ''}.
+
+{'JOB DESCRIPTION:\n' + job_description + '\n\n' if has_jd else ''}ORIGINAL CV:
+{cv_text}
+
+Instructions:
+1. Restructure to highlight the most relevant experience for this role
+2. Use strong action verbs and quantify achievements where possible
+3. Mirror key terminology from the job description if provided
+4. Surface NZ public sector competencies where relevant (policy, stakeholder engagement, Treaty awareness, public service values)
+5. Ensure professional NZ English throughout
+6. Keep all facts accurate — do not invent experience
+
+Return ONLY the enhanced CV text ready to copy. Use clear section headings (PROFESSIONAL SUMMARY, EXPERIENCE, EDUCATION, SKILLS, KEY ACHIEVEMENTS). No commentary."""
+
+    enhanced_text = _call_llm(prompt)
+    return enhanced_text, _text_to_html(enhanced_text)
+
+
+def generate_cover_letter(
+    cv_text: str,
+    job_title: str,
+    company: str,
+    job_description: str,
+) -> tuple[str, str]:
+    """Generate a tailored cover letter. Returns (text, html)."""
+    has_jd = bool(job_description.strip())
+
+    prompt = f"""Write a professional cover letter for a {job_title} role{f' at {company}' if company else ''}.
+
+{'JOB DESCRIPTION:\n' + job_description + '\n\n' if has_jd else ''}CANDIDATE CV:
+{cv_text}
+
+Requirements:
+- 3-4 paragraphs, professional but warm NZ tone
+- Opening paragraph: genuine interest in this specific role and organisation
+- Middle paragraphs: draw directly from the CV to demonstrate fit — be specific
+- Reference NZ public service values / Treaty obligations where genuinely relevant
+- Closing: confident, forward-looking call to action
+- Do NOT use "I am writing to apply for" as opening
+- Professional NZ English, no jargon
+
+Return ONLY the cover letter text starting with "Dear Hiring Manager," and ending with a sign-off line "[Your Name]". No commentary."""
+
+    cl_text = _call_llm(prompt)
+    return cl_text, _text_to_html(cl_text)
+
+
+def _text_to_html(text: str) -> str:
+    """Convert plain text CV/letter to simple styled HTML."""
+    lines = text.split("\n")
+    html_parts: list[str] = []
+    in_list = False
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            html_parts.append("<br>")
+            continue
+
+        is_heading = re.match(r"^[A-Z][A-Z\s\/]{3,}$", stripped)
+        is_bullet = stripped.startswith(("•", "-", "*"))
+
+        if is_heading:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            html_parts.append(
+                f'<h3 style="margin:14px 0 4px;font-size:13px;font-weight:700;'
+                f'text-transform:uppercase;letter-spacing:.05em;color:#1e40af;'
+                f'border-bottom:1px solid #e2e8f0;padding-bottom:4px;">{stripped}</h3>'
+            )
+        elif is_bullet:
+            if not in_list:
+                html_parts.append('<ul style="margin:4px 0;padding-left:20px;">')
+                in_list = True
+            html_parts.append(
+                f'<li style="margin:2px 0;font-size:14px;">{stripped[1:].strip()}</li>'
+            )
+        else:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            html_parts.append(
+                f'<p style="margin:4px 0;font-size:14px;line-height:1.6;">{stripped}</p>'
+            )
+
+    if in_list:
+        html_parts.append("</ul>")
+
+    return (
+        '<div style="font-family:Arial,sans-serif;max-width:700px;color:#1a202c;">'
+        + "".join(html_parts)
+        + "</div>"
+    )

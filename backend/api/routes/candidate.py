@@ -1,0 +1,160 @@
+"""Candidate portal API routes."""
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from agents.cv_enhancement_agent import enhance_cv, generate_cover_letter
+from api.auth import get_current_user
+from services import database as db
+
+router = APIRouter(prefix="/api/v1/candidate", tags=["candidate-portal"])
+
+
+class CreateApplicationRequest(BaseModel):
+    job_title: str
+    company: str = ""
+    job_description_text: str = ""
+
+
+class UpdateApplicationRequest(BaseModel):
+    job_title: str | None = None
+    company: str | None = None
+    job_description_text: str | None = None
+    status: str | None = None
+
+
+class UpsertProfileRequest(BaseModel):
+    full_name: str
+    email: str = ""
+
+
+class UploadCvRequest(BaseModel):
+    content_text: str
+
+
+@router.get("/profile")
+def get_profile(user: dict = Depends(get_current_user)) -> dict:
+    profile = db.get_candidate_profile(user["user_id"])
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profile
+
+
+@router.post("/profile")
+def upsert_profile(body: UpsertProfileRequest, user: dict = Depends(get_current_user)) -> dict:
+    return db.upsert_candidate_profile({
+        "id": user["user_id"],
+        "full_name": body.full_name,
+        "email": body.email or user["email"],
+    })
+
+
+@router.get("/applications")
+def list_applications(user: dict = Depends(get_current_user)) -> list[dict]:
+    return db.list_job_applications(user["user_id"])
+
+
+@router.post("/applications")
+def create_application(body: CreateApplicationRequest, user: dict = Depends(get_current_user)) -> dict:
+    _ensure_profile(user)
+    return db.create_job_application({
+        "candidate_profile_id": user["user_id"],
+        "job_title": body.job_title,
+        "company": body.company,
+        "job_description_text": body.job_description_text,
+    })
+
+
+@router.get("/applications/{app_id}")
+def get_application(app_id: str, user: dict = Depends(get_current_user)) -> dict:
+    app = db.get_job_application(app_id, user["user_id"])
+    if app is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    app["original_cv"] = db.get_latest_cv(app_id, "ORIGINAL")
+    app["enhanced_cv"] = db.get_latest_cv(app_id, "ENHANCED")
+    app["cover_letter"] = db.get_cover_letter(app_id)
+    return app
+
+
+@router.patch("/applications/{app_id}")
+def update_application(
+    app_id: str, body: UpdateApplicationRequest, user: dict = Depends(get_current_user)
+) -> dict:
+    _verify_ownership(app_id, user["user_id"])
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    return db.update_job_application(app_id, updates)
+
+
+@router.delete("/applications/{app_id}")
+def delete_application(app_id: str, user: dict = Depends(get_current_user)) -> dict:
+    _verify_ownership(app_id, user["user_id"])
+    db.delete_job_application(app_id)
+    return {"deleted": True}
+
+
+@router.post("/applications/{app_id}/cv")
+def upload_cv(app_id: str, body: UploadCvRequest, user: dict = Depends(get_current_user)) -> dict:
+    _verify_ownership(app_id, user["user_id"])
+    from agents.cv_enhancement_agent import _text_to_html
+    return db.save_cv_document({
+        "application_id": app_id,
+        "type": "ORIGINAL",
+        "content_text": body.content_text,
+        "content_html": _text_to_html(body.content_text),
+    })
+
+
+@router.post("/applications/{app_id}/enhance-cv")
+def enhance_cv_route(app_id: str, user: dict = Depends(get_current_user)) -> dict:
+    _verify_ownership(app_id, user["user_id"])
+    app = db.get_job_application(app_id, user["user_id"])
+    original = db.get_latest_cv(app_id, "ORIGINAL")
+    if not original:
+        raise HTTPException(status_code=400, detail="Upload a CV first before enhancing.")
+    try:
+        enhanced_text, enhanced_html = enhance_cv(
+            cv_text=original["content_text"],
+            job_title=app.get("job_title", ""),
+            company=app.get("company", ""),
+            job_description=app.get("job_description_text", ""),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    result = db.save_cv_document({
+        "application_id": app_id,
+        "type": "ENHANCED",
+        "content_text": enhanced_text,
+        "content_html": enhanced_html,
+    })
+    db.update_job_application(app_id, {"status": "IN_PROGRESS"})
+    return result
+
+
+@router.post("/applications/{app_id}/cover-letter")
+def generate_cover_letter_route(app_id: str, user: dict = Depends(get_current_user)) -> dict:
+    _verify_ownership(app_id, user["user_id"])
+    app = db.get_job_application(app_id, user["user_id"])
+    cv = db.get_latest_cv(app_id, "ENHANCED") or db.get_latest_cv(app_id, "ORIGINAL")
+    if not cv:
+        raise HTTPException(status_code=400, detail="Upload a CV first.")
+    try:
+        cl_text, cl_html = generate_cover_letter(
+            cv_text=cv["content_text"],
+            job_title=app.get("job_title", ""),
+            company=app.get("company", ""),
+            job_description=app.get("job_description_text", ""),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return db.upsert_cover_letter({"application_id": app_id, "content_text": cl_text, "content_html": cl_html})
+
+
+def _verify_ownership(app_id: str, user_id: str) -> None:
+    if db.get_job_application(app_id, user_id) is None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+def _ensure_profile(user: dict) -> None:
+    if db.get_candidate_profile(user["user_id"]) is None:
+        db.upsert_candidate_profile({"id": user["user_id"], "full_name": "", "email": user["email"]})

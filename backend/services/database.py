@@ -703,3 +703,139 @@ def delete_integration(provider: str) -> bool:
     client = get_client()
     client.table("integrations").delete().eq("provider", provider).execute()
     return True
+
+
+# ---------------------------------------------------------------------------
+# Candidate portal DB functions
+# ---------------------------------------------------------------------------
+
+
+@_retryable
+def get_candidate_profile(user_id: str) -> dict | None:
+    """Fetch a candidate profile by user UUID."""
+    client = get_client()
+    response = (
+        client.table("candidate_profiles")
+        .select("*")
+        .eq("id", user_id)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+@_retryable
+def upsert_candidate_profile(profile_dict: dict) -> dict:
+    """Insert or update a candidate profile."""
+    client = get_client()
+    response = (
+        client.table("candidate_profiles")
+        .upsert(profile_dict, on_conflict="id")
+        .execute()
+    )
+    return response.data[0]
+
+
+@_retryable
+def list_job_applications(user_id: str) -> list[dict]:
+    """Return all job applications for a candidate, newest first."""
+    client = get_client()
+    response = (
+        client.table("job_applications")
+        .select("*")
+        .eq("candidate_profile_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return response.data
+
+
+@_retryable
+def create_job_application(app_dict: dict) -> dict:
+    """Insert a new job application."""
+    client = get_client()
+    response = client.table("job_applications").insert(app_dict).execute()
+    return response.data[0]
+
+
+@_retryable
+def get_job_application(app_id: str, user_id: str) -> dict | None:
+    """Fetch a job application, enforcing ownership."""
+    client = get_client()
+    response = (
+        client.table("job_applications")
+        .select("*")
+        .eq("id", app_id)
+        .eq("candidate_profile_id", user_id)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+@_retryable
+def update_job_application(app_id: str, updates: dict) -> dict:
+    """Update fields on a job application."""
+    from datetime import datetime, timezone
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    client = get_client()
+    response = (
+        client.table("job_applications")
+        .update(updates)
+        .eq("id", app_id)
+        .execute()
+    )
+    return response.data[0]
+
+
+@_retryable
+def delete_job_application(app_id: str) -> None:
+    """Delete a job application and all related documents."""
+    client = get_client()
+    client.table("job_applications").delete().eq("id", app_id).execute()
+
+
+@_retryable
+def save_cv_document(doc_dict: dict) -> dict:
+    """Insert a CV document (original or enhanced)."""
+    client = get_client()
+    response = client.table("cv_documents").insert(doc_dict).execute()
+    return response.data[0]
+
+
+@_retryable
+def get_latest_cv(app_id: str, cv_type: str) -> dict | None:
+    """Return the most recent CV of given type for an application."""
+    client = get_client()
+    response = (
+        client.table("cv_documents")
+        .select("*")
+        .eq("application_id", app_id)
+        .eq("type", cv_type)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+@_retryable
+def upsert_cover_letter(cl_dict: dict) -> dict:
+    """Replace existing cover letter for an application (delete + insert)."""
+    client = get_client()
+    client.table("cover_letters").delete().eq("application_id", cl_dict["application_id"]).execute()
+    response = client.table("cover_letters").insert(cl_dict).execute()
+    return response.data[0]
+
+
+@_retryable
+def get_cover_letter(app_id: str) -> dict | None:
+    """Return the cover letter for an application."""
+    client = get_client()
+    response = (
+        client.table("cover_letters")
+        .select("*")
+        .eq("application_id", app_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None
