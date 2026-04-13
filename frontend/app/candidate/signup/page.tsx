@@ -18,28 +18,36 @@ export default function CandidateSignupPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const supabase = createClient()
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) {
-      setError(error.message)
+    try {
+      const supabase = createClient()
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out — your Supabase project may be paused. Visit supabase.com to restore it.')), 10000)
+      )
+      const request = supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      const { data, error } = await Promise.race([request, timeout])
+      if (error) {
+        setError(error.message)
+        return
+      }
+      // If email confirmation is disabled in Supabase, user is immediately logged in
+      if (data.session) {
+        router.push('/candidate/dashboard')
+        router.refresh()
+      } else {
+        setSuccess(true)
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
       setLoading(false)
-      return
     }
-    // If email confirmation is disabled in Supabase, user is immediately logged in
-    if (data.session) {
-      router.push('/candidate/dashboard')
-      router.refresh()
-    } else {
-      setSuccess(true)
-    }
-    setLoading(false)
   }
 
   if (success) {
