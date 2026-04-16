@@ -14,18 +14,28 @@ _SYSTEM_PROMPT = (
 
 
 def _call_llm(prompt: str) -> str:
-    """Call Gemini via Google Generative AI SDK (uses GEMINI_API_KEY env var)."""
-    try:
-        import os
-        import google.generativeai as genai  # type: ignore[import]
+    """Call Gemini via REST API (uses GEMINI_API_KEY env var)."""
+    import os
+    import httpx
 
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash-latest",
-            system_instruction=_SYSTEM_PROMPT,
-        )
-        response = model.generate_content(prompt)
-        return response.text
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY not set")
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models"
+        f"/gemini-1.5-flash:generateContent?key={api_key}"
+    )
+    body = {
+        "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": 4096},
+    }
+    try:
+        resp = httpx.post(url, json=body, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as exc:
         raise RuntimeError(f"LLM call failed: {exc}") from exc
 
