@@ -27,9 +27,9 @@ def _call_llm(prompt: str) -> str:
         "https://generativelanguage.googleapis.com/v1/models"
         f"/gemini-2.0-flash:generateContent?key={api_key}"
     )
+    full_prompt = _SYSTEM_PROMPT + "\n\n" + prompt
     body = {
-        "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "contents": [{"role": "user", "parts": [{"text": full_prompt}]}],
         "generationConfig": {"maxOutputTokens": 4096, "temperature": 0.7},
     }
     try:
