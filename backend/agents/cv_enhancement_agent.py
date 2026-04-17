@@ -221,8 +221,7 @@ def generate_interview_qa(
     interview_format: str,
     focus_areas: str,
     interviewer_roles: str = "",
-    num_questions: int = 12,
-    categories: list[str] | None = None,
+    cat_counts: dict | None = None,
 ) -> list[dict]:
     """Generate interview Q&A. Returns list of {question, answer, category, tip} dicts."""
     import json
@@ -258,8 +257,24 @@ def generate_interview_qa(
             "what a strong answer looks like, and one common mistake to avoid.\n"
         )
 
+    # Build category instruction from cat_counts
+    if cat_counts:
+        active = {k: v for k, v in cat_counts.items() if v > 0}
+        total = sum(active.values())
+        cat_spec = ", ".join(f"{v} {k}" for k, v in active.items())
+        cat_instruction = (
+            f"Generate exactly {total} questions in this breakdown: {cat_spec}. "
+            "Each question must use the exact category name specified."
+        )
+    else:
+        total = 12
+        cat_instruction = (
+            f"Generate exactly {total} questions spread across: "
+            "Behavioural (3), Technical (2), Situational (2), Motivation (2), Values (1), General (2)."
+        )
+
     prompt = (
-        f"Generate exactly {num_questions} likely interview questions for a {job_title} role{at_company}, "
+        f"{cat_instruction} These are interview questions for a {job_title} role{at_company}, "
         "with strong suggested answers and coaching tips tailored to this candidate.\n\n"
         f"{context}\n"
         f"{interviewer_guidance}\n"
@@ -274,14 +289,9 @@ def generate_interview_qa(
         "and one thing to watch out for.\n\n"
         "Return ONLY a JSON array, no other text:\n"
         '[{"category": "...", "question": "...", "answer": "...", "tip": "..."}, ...]\n\n'
-        + (
-            f"QUESTION TYPES REQUESTED: focus ONLY on these categories: {', '.join(categories)}. "
-            "Do not include questions from other categories.\n\n"
-            if categories else
-            "Spread across NZ public sector competencies: policy analysis, stakeholder engagement, "
-            "Te Tiriti o Waitangi obligations, public service values, evidence-based decision making, "
-            "change management, relationship management, leadership.\n\n"
-        )
+        + "Focus on NZ public sector competencies: policy analysis, stakeholder engagement, "
+        "Te Tiriti o Waitangi obligations, public service values, evidence-based decision making, "
+        "change management, relationship management, leadership.\n\n"
     )
 
     raw = _call_llm(prompt)

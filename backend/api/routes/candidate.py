@@ -47,8 +47,7 @@ class UpsertInterviewPrepRequest(BaseModel):
 
 
 class GenerateInterviewQARequest(BaseModel):
-    num_questions: int = 12
-    categories: list[str] = []
+    cat_counts: dict[str, int] = {}
 
 
 class GenerateCvRequest(BaseModel):
@@ -282,8 +281,7 @@ def generate_interview_qa_endpoint(app_id: str, body: GenerateInterviewQARequest
             interview_format=prep.get("interview_format", ""),
             focus_areas=prep.get("focus_areas", ""),
             interviewer_roles=prep.get("interviewer_roles", ""),
-            num_questions=body.num_questions,
-            categories=body.categories if body.categories else None,
+            cat_counts=body.cat_counts if body.cat_counts else None,
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

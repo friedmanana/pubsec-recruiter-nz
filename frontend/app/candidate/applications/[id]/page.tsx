@@ -92,10 +92,11 @@ export default function ApplicationWorkspace() {
   const [interviewFormat, setInterviewFormat] = useState('')
   const [interviewerRoles, setInterviewerRoles] = useState('')
   const [focusAreas, setFocusAreas] = useState('')
-  const [numQuestions, setNumQuestions] = useState(12)
+  const [catCounts, setCatCounts] = useState<Record<string, number>>({
+    Behavioural: 3, Technical: 2, Situational: 2, Motivation: 2, Values: 1,
+  })
   const [qaItems, setQaItems] = useState<QAItem[]>([])
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
-  const [activeCats, setActiveCats] = useState<string[]>([])
   const [showStarredOnly, setShowStarredOnly] = useState(false)
   const [prepLoaded, setPrepLoaded] = useState(false)
 
@@ -239,7 +240,7 @@ export default function ApplicationWorkspace() {
     setGeneratingQA(true); setError(null)
     setShowStarredOnly(false)
     try {
-      const result = await candidateApi.generateInterviewQA(id, numQuestions, activeCats)
+      const result = await candidateApi.generateInterviewQA(id, catCounts)
       setQaItems(result.qa); setExpandedIndex(0)
     } catch (e) { setError(String(e)) }
     finally { setGeneratingQA(false) }
@@ -705,11 +706,14 @@ export default function ApplicationWorkspace() {
       {/* ── Phase 3: Interview Prep ── */}
       {phase === 3 && (() => {
         const ALL_CATS = ['Behavioural', 'Technical', 'Situational', 'Motivation', 'Values']
+        const totalQuestions = Object.values(catCounts).reduce((a, b) => a + b, 0)
         const starredCount = qaItems.filter(q => q.starred).length
 
-        // activeCats drives both generation (which types to include) and filtering (what to show)
-        const toggleCat = (cat: string) =>
-          setActiveCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])
+        // cats with count > 0 act as the post-generation filter too
+        const activeCats = ALL_CATS.filter(c => (catCounts[c] ?? 0) > 0)
+
+        const setCatCount = (cat: string, val: number) =>
+          setCatCounts(prev => ({ ...prev, [cat]: Math.max(0, Math.min(10, val)) }))
 
         const visibleItems = qaItems
           .map((item, index) => ({ item, index }))
@@ -777,77 +781,69 @@ export default function ApplicationWorkspace() {
                 </div>
               </div>
 
-              {/* Question settings — always visible */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 space-y-4">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Question settings</p>
+              {/* Question settings — category + count steppers */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Questions per type</p>
+                  <span className="text-xs text-slate-400 font-semibold">
+                    Total: <span className="text-slate-700">{totalQuestions}</span>
+                  </span>
+                </div>
 
-                {/* Question types */}
-                <div>
-                  <p className="text-xs text-slate-500 font-semibold mb-2">
-                    Types to include
-                    <span className="ml-2 font-normal text-slate-400">{activeCats.length === 0 ? '— all types' : `— ${activeCats.length} selected`}</span>
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {ALL_CATS.map(cat => {
-                      const isActive = activeCats.includes(cat)
-                      const postCount = qaItems.filter(q => (q.category || 'General') === cat).length
-                      return (
-                        <button
-                          key={cat}
-                          onClick={() => toggleCat(cat)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                            isActive
-                              ? `${CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.General} border-transparent shadow-sm`
-                              : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
-                          }`}
-                        >
+                <div className="space-y-2">
+                  {ALL_CATS.map(cat => {
+                    const count = catCounts[cat] ?? 0
+                    const postCount = qaItems.filter(q => (q.category || 'General') === cat).length
+                    const colorClass = CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.General
+                    return (
+                      <div key={cat} className="flex items-center gap-3">
+                        {/* Category label */}
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-lg w-28 text-center shrink-0 ${count > 0 ? colorClass : 'bg-slate-100 text-slate-400'}`}>
                           {cat}
-                          {postCount > 0 && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${isActive ? 'bg-white/60' : 'bg-slate-100'}`}>
-                              {postCount}
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <p className="text-xs text-slate-400 mt-2">Leave all unselected for a balanced mix. After generating, use these to filter results.</p>
+                        </span>
+
+                        {/* Stepper */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setCatCount(cat, count - 1)}
+                            disabled={count === 0}
+                            className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-30 font-bold text-base flex items-center justify-center transition-colors"
+                          >−</button>
+                          <span className={`w-8 text-center text-sm font-bold ${count > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
+                            {count}
+                          </span>
+                          <button
+                            onClick={() => setCatCount(cat, count + 1)}
+                            disabled={count >= 10}
+                            className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-30 font-bold text-base flex items-center justify-center transition-colors"
+                          >+</button>
+                        </div>
+
+                        {/* Post-generation actual count */}
+                        {postCount > 0 && (
+                          <span className="text-xs text-slate-400">→ {postCount} generated</span>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
 
-                {/* Number of questions */}
-                <div>
-                  <p className="text-xs text-slate-500 font-semibold mb-2">How many questions</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {[5, 8, 10, 12, 15, 20].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setNumQuestions(n)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all border ${
-                          numQuestions === n
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <p className="text-xs text-slate-400 mt-3">Set a type to 0 to skip it. After generating, counts also filter the results.</p>
               </div>
 
               <button
                 onClick={handleGenerateQA}
-                disabled={generatingQA}
+                disabled={generatingQA || totalQuestions === 0}
                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-base font-bold rounded-2xl transition-colors flex items-center justify-center gap-3 shadow-md"
               >
                 {generatingQA ? (
-                  <><Spinner />Generating {numQuestions} questions… (~30s)</>
+                  <><Spinner />Generating {totalQuestions} questions… (~30s)</>
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {qaItems.length > 0 ? `↻ Regenerate (${numQuestions} questions)` : `🎯 Generate ${numQuestions} Questions`}
+                    {qaItems.length > 0 ? `↻ Regenerate (${totalQuestions} questions)` : `🎯 Generate ${totalQuestions} Questions`}
                   </>
                 )}
               </button>
@@ -892,10 +888,13 @@ export default function ApplicationWorkspace() {
                       )}
                       {(activeCats.length > 0 || showStarredOnly) && (
                         <button
-                          onClick={() => { setActiveCats([]); setShowStarredOnly(false) }}
+                          onClick={() => {
+                            setCatCounts({ Behavioural: 3, Technical: 2, Situational: 2, Motivation: 2, Values: 1 })
+                            setShowStarredOnly(false)
+                          }}
                           className="text-xs text-slate-400 hover:text-slate-600 underline"
                         >
-                          Clear filters
+                          Reset filters
                         </button>
                       )}
                     </div>
@@ -962,8 +961,14 @@ export default function ApplicationWorkspace() {
                   {visibleItems.length === 0 && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-400">
                       <p className="text-base font-medium">No questions match the current filters</p>
-                      <button onClick={() => { setActiveCats([]); setShowStarredOnly(false) }} className="mt-2 text-sm text-indigo-500 hover:underline">
-                        Clear filters
+                      <button
+                        onClick={() => {
+                          setCatCounts({ Behavioural: 3, Technical: 2, Situational: 2, Motivation: 2, Values: 1 })
+                          setShowStarredOnly(false)
+                        }}
+                        className="mt-2 text-sm text-indigo-500 hover:underline"
+                      >
+                        Reset filters
                       </button>
                     </div>
                   )}
