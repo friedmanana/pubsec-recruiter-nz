@@ -62,6 +62,16 @@ export const candidateApi = {
   generateCoverLetter: (id: string) =>
     fetchCandidate<CoverLetter>(`/api/v1/candidate/applications/${id}/cover-letter`, { method: 'POST' }),
 
+  enhanceCoverLetter: (id: string, existing_letter: string) =>
+    fetchCandidate<CoverLetter>(`/api/v1/candidate/applications/${id}/enhance-cover-letter`, {
+      method: 'POST', body: JSON.stringify({ existing_letter }),
+    }),
+
+  saveCoverLetter: (id: string, content_text: string) =>
+    fetchCandidate<CoverLetter>(`/api/v1/candidate/applications/${id}/cover-letter`, {
+      method: 'PATCH', body: JSON.stringify({ content_text }),
+    }),
+
   getInterviewPrep: (id: string) =>
     fetchCandidate<{interview_date?: string, interview_format?: string, focus_areas?: string, generated_qa?: QAItem[]}>(`/api/v1/candidate/applications/${id}/interview-prep`),
 

@@ -42,6 +42,11 @@ export default function ApplicationWorkspace() {
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null)
   const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState<Phase>(1)
+  const [clMode, setClMode] = useState<'scratch' | 'enhance'>('scratch')
+  const [clEditText, setClEditText] = useState('')
+  const [ownLetterInput, setOwnLetterInput] = useState('')
+  const [enhancingCl, setEnhancingCl] = useState(false)
+  const [savingCl, setSavingCl] = useState(false)
 
   const [cvInput, setCvInput] = useState('')
   const [jdInput, setJdInput] = useState('')
@@ -73,6 +78,7 @@ export default function ApplicationWorkspace() {
       setOriginalCv(data.original_cv)
       setEnhancedCv(data.enhanced_cv)
       setCoverLetter(data.cover_letter)
+      if (data.cover_letter) setClEditText(data.cover_letter.content_text)
       setJobTitle(data.job_title)
       setCompany(data.company ?? '')
       setJdInput(data.job_description_text ?? '')
@@ -136,9 +142,29 @@ export default function ApplicationWorkspace() {
     setGeneratingCl(true); setError(null)
     try {
       const cl = await candidateApi.generateCoverLetter(id)
-      setCoverLetter(cl)
+      setCoverLetter(cl); setClEditText(cl.content_text)
     } catch (e) { setError(String(e)) }
     finally { setGeneratingCl(false) }
+  }
+
+  const handleEnhanceCl = async () => {
+    if (!ownLetterInput.trim()) return
+    setEnhancingCl(true); setError(null)
+    try {
+      const cl = await candidateApi.enhanceCoverLetter(id, ownLetterInput)
+      setCoverLetter(cl); setClEditText(cl.content_text)
+    } catch (e) { setError(String(e)) }
+    finally { setEnhancingCl(false) }
+  }
+
+  const handleSaveCl = async () => {
+    if (!clEditText.trim()) return
+    setSavingCl(true); setError(null)
+    try {
+      const cl = await candidateApi.saveCoverLetter(id, clEditText)
+      setCoverLetter(cl); flash('Cover letter saved')
+    } catch (e) { setError(String(e)) }
+    finally { setSavingCl(false) }
   }
 
   const handleSavePrep = async () => {
@@ -380,66 +406,128 @@ export default function ApplicationWorkspace() {
 
       {/* ── Phase 2: Cover Letter ── */}
       {phase === 2 && (
-        <div className="max-w-3xl">
-          <div className={`bg-white rounded-2xl p-8 border shadow-sm ${coverLetter ? 'border-green-200' : 'border-slate-200'}`}>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  {coverLetter ? '✨ Your Cover Letter' : 'Cover Letter'}
-                </h2>
-                <p className="text-sm text-slate-500 mt-1">AI-written based on your CV and job description</p>
-              </div>
-              {coverLetter && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          {/* LEFT — mode selector + inputs */}
+          <div className="space-y-6">
+
+            {/* Mode toggle */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Cover Letter</h2>
+              <p className="text-sm text-slate-500 mb-5">Choose how you want to create your cover letter</p>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
-                  onClick={() => handleCopy(coverLetter.content_text, 'cl')}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-colors"
+                  onClick={() => setClMode('scratch')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${clMode === 'scratch' ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-slate-300'}`}
                 >
-                  {copied === 'cl' ? '✓ Copied!' : 'Copy text'}
+                  <span className="text-2xl">🤖</span>
+                  <span className={`text-sm font-semibold ${clMode === 'scratch' ? 'text-green-700' : 'text-slate-600'}`}>Write from scratch</span>
+                  <span className="text-xs text-slate-400 text-center">AI writes a tailored letter using your CV</span>
                 </button>
+                <button
+                  onClick={() => setClMode('enhance')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${clMode === 'enhance' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <span className="text-2xl">✨</span>
+                  <span className={`text-sm font-semibold ${clMode === 'enhance' ? 'text-indigo-700' : 'text-slate-600'}`}>Enhance mine</span>
+                  <span className="text-xs text-slate-400 text-center">Paste your letter, AI improves it</span>
+                </button>
+              </div>
+
+              {clMode === 'scratch' ? (
+                <div>
+                  {!originalCv && (
+                    <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                      <p className="text-sm text-amber-700 font-medium">Add your CV in Phase 1 for a better result</p>
+                    </div>
+                  )}
+                  <p className="text-sm text-slate-500 mb-4">AI will write a tailored cover letter based on your CV and job description.</p>
+                  <button
+                    onClick={handleGenerateCl}
+                    disabled={generatingCl}
+                    className="w-full py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-base font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {generatingCl ? <><Spinner />Writing… (~20s)</> : '🤖 Write Cover Letter'}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Your existing cover letter</label>
+                  <textarea
+                    value={ownLetterInput}
+                    onChange={e => setOwnLetterInput(e.target.value)}
+                    rows={12}
+                    placeholder="Paste your cover letter here…"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
+                  />
+                  <button
+                    onClick={handleEnhanceCl}
+                    disabled={enhancingCl || !ownLetterInput.trim()}
+                    className="mt-3 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-base font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {enhancingCl ? <><Spinner />Enhancing… (~20s)</> : '✨ Enhance My Letter'}
+                  </button>
+                </div>
               )}
             </div>
-            {!originalCv ? (
-              <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-200">
-                <p className="text-base text-amber-700 font-medium mb-3">Save your CV in Phase 1 before generating a cover letter.</p>
-                <button onClick={() => setPhase(1)} className="text-sm text-indigo-600 hover:underline font-semibold">
-                  ← Go to Phase 1
-                </button>
+          </div>
+
+          {/* RIGHT — editable output */}
+          <div>
+            <div className={`bg-white rounded-2xl p-6 border shadow-sm h-full ${coverLetter ? 'border-green-200' : 'border-slate-200'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    {coverLetter ? '✨ Your Cover Letter' : 'Cover Letter Output'}
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {coverLetter ? 'Edit directly below, then save' : 'Will appear here after generation'}
+                  </p>
+                </div>
+                {coverLetter && (
+                  <button
+                    onClick={() => handleCopy(clEditText, 'cl')}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-colors"
+                  >
+                    {copied === 'cl' ? '✓ Copied!' : 'Copy'}
+                  </button>
+                )}
               </div>
-            ) : coverLetter ? (
-              <>
-                <div
-                  className="border border-green-100 rounded-xl p-6 bg-green-50/20 max-h-[600px] overflow-y-auto text-base leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: coverLetter.content_html }}
-                />
-                <button
-                  onClick={handleGenerateCl}
-                  disabled={generatingCl}
-                  className="mt-4 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50 rounded-xl transition-colors"
-                >
-                  {generatingCl ? <><Spinner />Regenerating…</> : '↻ Regenerate'}
-                </button>
-              </>
-            ) : (
-              <div className="text-center py-14">
-                <p className="text-base text-slate-500 mb-6">Generate a tailored cover letter based on your CV and the job description.</p>
-                <button
-                  onClick={handleGenerateCl}
-                  disabled={generatingCl}
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-base font-bold rounded-2xl transition-colors shadow-md"
-                >
-                  {generatingCl ? (
-                    <><Spinner />Generating… (~20s)</>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
-                      </svg>
-                      Generate Cover Letter
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+
+              {coverLetter ? (
+                <>
+                  <textarea
+                    value={clEditText}
+                    onChange={e => setClEditText(e.target.value)}
+                    rows={22}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-green-500 resize-none leading-relaxed"
+                  />
+                  <div className="flex gap-3 mt-3">
+                    <button
+                      onClick={handleSaveCl}
+                      disabled={savingCl}
+                      className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors"
+                    >
+                      {savingCl ? 'Saving…' : '💾 Save edits'}
+                    </button>
+                    <button
+                      onClick={clMode === 'scratch' ? handleGenerateCl : handleEnhanceCl}
+                      disabled={generatingCl || enhancingCl}
+                      className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-sm font-bold rounded-xl transition-colors"
+                    >
+                      ↻ Regenerate
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-16 text-center text-slate-300 h-full flex flex-col items-center justify-center">
+                  <span className="text-5xl mb-4">✍🏼</span>
+                  <p className="text-base font-semibold">Your cover letter will appear here</p>
+                  <p className="text-sm mt-1">Choose a mode and generate to get started</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

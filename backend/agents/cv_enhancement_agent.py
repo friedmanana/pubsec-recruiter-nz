@@ -104,6 +104,37 @@ def generate_cover_letter(
     return cl_text, _text_to_html(cl_text)
 
 
+def enhance_cover_letter(
+    existing_letter: str,
+    job_title: str,
+    company: str,
+    job_description: str,
+    cv_text: str,
+) -> tuple[str, str]:
+    """Enhance a candidate's existing cover letter. Returns (text, html)."""
+    at_company = f" at {company}" if company else ""
+    jd_section = "JOB DESCRIPTION:\n" + job_description + "\n\n" if job_description.strip() else ""
+    cv_section = "CANDIDATE CV (for context):\n" + cv_text + "\n\n" if cv_text.strip() else ""
+
+    prompt = (
+        f"Enhance and improve the following cover letter for a {job_title} role{at_company}.\n\n"
+        f"{jd_section}"
+        f"{cv_section}"
+        f"EXISTING COVER LETTER:\n{existing_letter}\n\n"
+        "Instructions:\n"
+        "- Keep the candidate's own voice and personal details — do not invent new experience\n"
+        "- Strengthen the opening to be more compelling and specific\n"
+        "- Tighten the language — remove clichés, passive voice, and filler phrases\n"
+        "- Better align the language with the job description keywords if provided\n"
+        "- Ensure a confident, forward-looking closing\n"
+        "- Professional NZ English throughout\n\n"
+        "Return ONLY the enhanced cover letter text, starting with the salutation and ending with the sign-off. No commentary."
+    )
+
+    cl_text = _call_llm(prompt)
+    return cl_text, _text_to_html(cl_text)
+
+
 def generate_interview_qa(
     cv_text: str,
     job_title: str,

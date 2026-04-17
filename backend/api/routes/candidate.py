@@ -4,7 +4,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from agents.cv_enhancement_agent import enhance_cv, generate_cover_letter, generate_interview_qa
+from agents.cv_enhancement_agent import (
+    enhance_cover_letter,
+    enhance_cv,
+    generate_cover_letter,
+    generate_interview_qa,
+)
 from api.auth import get_current_user
 from services import database as db
 
@@ -41,6 +46,14 @@ class UpsertInterviewPrepRequest(BaseModel):
 
 class GenerateInterviewQARequest(BaseModel):
     pass  # uses stored data
+
+
+class EnhanceCoverLetterRequest(BaseModel):
+    existing_letter: str
+
+
+class SaveCoverLetterRequest(BaseModel):
+    content_text: str
 
 
 @router.get("/profile")
@@ -158,6 +171,35 @@ def generate_cover_letter_route(app_id: str, user: dict = Depends(get_current_us
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return db.upsert_cover_letter({"application_id": app_id, "content_text": cl_text, "content_html": cl_html})
+
+
+@router.post("/applications/{app_id}/enhance-cover-letter")
+def enhance_cover_letter_route(app_id: str, body: EnhanceCoverLetterRequest, user: dict = Depends(get_current_user)) -> dict:
+    app = _verify_ownership(app_id, user["user_id"])
+    cv = db.get_latest_cv(app_id, "ENHANCED") or db.get_latest_cv(app_id, "ORIGINAL")
+    try:
+        cl_text, cl_html = enhance_cover_letter(
+            existing_letter=body.existing_letter,
+            job_title=app.get("job_title", ""),
+            company=app.get("company", ""),
+            job_description=app.get("job_description_text", ""),
+            cv_text=cv["content_text"] if cv else "",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return db.upsert_cover_letter({"application_id": app_id, "content_text": cl_text, "content_html": cl_html})
+
+
+@router.patch("/applications/{app_id}/cover-letter")
+def save_cover_letter(app_id: str, body: SaveCoverLetterRequest, user: dict = Depends(get_current_user)) -> dict:
+    """Save manually edited cover letter text."""
+    _verify_ownership(app_id, user["user_id"])
+    from agents.cv_enhancement_agent import _text_to_html
+    return db.upsert_cover_letter({
+        "application_id": app_id,
+        "content_text": body.content_text,
+        "content_html": _text_to_html(body.content_text),
+    })
 
 
 @router.get("/applications/{app_id}/interview-prep")
