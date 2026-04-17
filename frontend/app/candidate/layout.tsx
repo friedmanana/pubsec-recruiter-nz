@@ -31,28 +31,28 @@ export default function CandidateLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Candidate nav */}
-      <nav className="bg-white border-b border-slate-200 px-4 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/candidate/dashboard" className="text-sm font-bold text-indigo-600">
+      <nav className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link href="/candidate/dashboard" className="text-lg font-bold text-indigo-600">
               Career Assistant
             </Link>
-            <Link href="/candidate/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
+            <Link href="/candidate/dashboard" className="text-base text-slate-600 hover:text-slate-900 font-medium">
               My Applications
             </Link>
           </div>
-          <div className="flex items-center gap-4">
-            {userEmail && <span className="text-xs text-slate-400">{userEmail}</span>}
+          <div className="flex items-center gap-5">
+            {userEmail && <span className="text-sm text-slate-400">{userEmail}</span>}
             <button
               onClick={handleSignOut}
-              className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+              className="text-sm text-slate-500 hover:text-slate-700 font-medium hover:underline"
             >
               Sign out
             </button>
           </div>
         </div>
       </nav>
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-10">
         {children}
       </main>
     </div>
