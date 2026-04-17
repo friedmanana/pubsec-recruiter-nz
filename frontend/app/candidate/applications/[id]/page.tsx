@@ -98,6 +98,7 @@ export default function ApplicationWorkspace() {
   const [qaItems, setQaItems] = useState<QAItem[]>([])
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const [showStarredOnly, setShowStarredOnly] = useState(false)
+  const [topicFilter, setTopicFilter] = useState('')
   const [prepLoaded, setPrepLoaded] = useState(false)
 
   const [savingCv, setSavingCv] = useState(false)
@@ -239,6 +240,7 @@ export default function ApplicationWorkspace() {
     await handleSavePrep()
     setGeneratingQA(true); setError(null)
     setShowStarredOnly(false)
+    setTopicFilter('')
     try {
       const result = await candidateApi.generateInterviewQA(id, catCounts)
       setQaItems(result.qa); setExpandedIndex(0)
@@ -715,6 +717,8 @@ export default function ApplicationWorkspace() {
         const setCatCount = (cat: string, val: number) =>
           setCatCounts(prev => ({ ...prev, [cat]: Math.max(0, Math.min(10, val)) }))
 
+        const topicLower = topicFilter.trim().toLowerCase()
+
         const visibleItems = qaItems
           .map((item, index) => ({ item, index }))
           .filter(({ item }) => {
@@ -722,6 +726,11 @@ export default function ApplicationWorkspace() {
             // Only hide a category if it's a known type AND explicitly set to 0
             const cat = item.category || 'General'
             if (ALL_CATS.includes(cat) && (catCounts[cat] ?? 1) === 0) return false
+            // Topic text filter
+            if (topicLower) {
+              const haystack = `${item.question} ${item.answer} ${item.tip ?? ''}`.toLowerCase()
+              if (!haystack.includes(topicLower)) return false
+            }
             return true
           })
 
@@ -869,11 +878,32 @@ export default function ApplicationWorkspace() {
                 </div>
               ) : (
                 <>
+                  {/* Topic filter */}
+                  <div className="relative">
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={topicFilter}
+                      onChange={e => setTopicFilter(e.target.value)}
+                      placeholder="Filter by topic… e.g. stakeholder, Treaty, leadership, budget"
+                      className="w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent shadow-sm"
+                    />
+                    {topicFilter && (
+                      <button
+                        onClick={() => setTopicFilter('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-lg leading-none"
+                      >×</button>
+                    )}
+                  </div>
+
                   {/* Slim results header */}
                   <div className="flex items-center justify-between px-1">
                     <p className="text-sm text-slate-500">
                       Showing <span className="font-semibold text-slate-700">{visibleItems.length}</span> of {qaItems.length} questions
-                      {starredCount > 0 && ` · ${starredCount} ⭐ starred`}
+                      {topicFilter && <span className="text-indigo-500"> · "{topicFilter}"</span>}
+                      {starredCount > 0 && !showStarredOnly && ` · ${starredCount} ⭐ starred`}
                     </p>
                     <div className="flex items-center gap-2">
                       {starredCount > 0 && (
@@ -888,11 +918,12 @@ export default function ApplicationWorkspace() {
                           ⭐ Starred only
                         </button>
                       )}
-                      {(activeCats.length > 0 || showStarredOnly) && (
+                      {(activeCats.length > 0 || showStarredOnly || topicFilter) && (
                         <button
                           onClick={() => {
                             setCatCounts({ Behavioural: 3, Technical: 2, Situational: 2, Motivation: 2, Values: 1 })
                             setShowStarredOnly(false)
+                            setTopicFilter('')
                           }}
                           className="text-xs text-slate-400 hover:text-slate-600 underline"
                         >
@@ -967,6 +998,7 @@ export default function ApplicationWorkspace() {
                         onClick={() => {
                           setCatCounts({ Behavioural: 3, Technical: 2, Situational: 2, Motivation: 2, Values: 1 })
                           setShowStarredOnly(false)
+                          setTopicFilter('')
                         }}
                         className="mt-2 text-sm text-indigo-500 hover:underline"
                       >
