@@ -3,7 +3,6 @@ import Link from 'next/link'
 const APPS = [
   {
     id: 'recruitment',
-    emoji: '🏢',
     title: 'Recruitment Suite',
     description: 'Smart hiring tools powered by AI — from creating job listings to screening candidates and preparing for interviews.',
     color: 'indigo',
@@ -12,24 +11,27 @@ const APPS = [
         label: 'Hiring Manager',
         description: 'Post jobs, screen candidates, manage your pipeline',
         href: '/jobs',
-        icon: '👔',
+        icon: (
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 3h-8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z" />
+          </svg>
+        ),
         primary: true,
       },
       {
         label: 'Job Seeker',
         description: 'Build your CV, write cover letters, ace your interview',
         href: '/candidate/dashboard',
-        icon: '🎯',
+        icon: (
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        ),
         primary: false,
       },
     ],
   },
-]
-
-const COMING_SOON = [
-  { emoji: '📊', title: 'Content Studio', description: 'Generate blogs, social posts, and marketing copy in seconds.' },
-  { emoji: '📝', title: 'Document Writer', description: 'Create structured reports, proposals, and briefs effortlessly.' },
-  { emoji: '🔍', title: 'Research Assistant', description: 'Deep research and summarisation across multiple sources.' },
 ]
 
 const COLOR_MAP: Record<string, { card: string; badge: string; btn: string; btnOutline: string }> = {
@@ -41,53 +43,83 @@ const COLOR_MAP: Record<string, { card: string; badge: string; btn: string; btnO
   },
 }
 
+function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const sizes = {
+    sm: { box: 28, r: 7, text: 'text-base' },
+    md: { box: 36, r: 9, text: 'text-xl' },
+    lg: { box: 52, r: 13, text: 'text-3xl' },
+  }
+  const s = sizes[size]
+  return (
+    <div className="flex items-center gap-2.5">
+      {/* Icon mark */}
+      <svg width={s.box} height={s.box} viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="52" height="52" rx={s.r} fill="#4F46E5" />
+        {/* Three dots — pips */}
+        <circle cx="16" cy="26" r="5" fill="white" fillOpacity="0.4" />
+        <circle cx="26" cy="16" r="5" fill="white" fillOpacity="0.75" />
+        <circle cx="36" cy="26" r="5" fill="white" />
+        <circle cx="26" cy="36" r="5" fill="white" fillOpacity="0.6" />
+        {/* Connecting lines */}
+        <line x1="16" y1="26" x2="26" y2="16" stroke="white" strokeWidth="1.5" strokeOpacity="0.3" />
+        <line x1="26" y1="16" x2="36" y2="26" stroke="white" strokeWidth="1.5" strokeOpacity="0.3" />
+        <line x1="36" y1="26" x2="26" y2="36" stroke="white" strokeWidth="1.5" strokeOpacity="0.3" />
+        <line x1="26" y1="36" x2="16" y2="26" stroke="white" strokeWidth="1.5" strokeOpacity="0.3" />
+      </svg>
+      {/* Wordmark */}
+      <span className={`${s.text} font-black tracking-tight`}>
+        <span className="text-indigo-600">AI</span>
+        <span className="text-slate-800"> Pips</span>
+      </span>
+    </div>
+  )
+}
+
 export default function HubPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex flex-col">
 
       {/* Nav */}
       <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-black text-indigo-600 tracking-tight">ai</span>
-            <span className="text-xl font-black text-slate-800 tracking-tight">pips</span>
-          </div>
-          <span className="text-xs text-slate-400 font-medium">AI tools for everyone</span>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Logo size="sm" />
+          <nav className="hidden sm:flex items-center gap-6 text-sm text-slate-500 font-medium">
+            <span className="text-slate-300">|</span>
+            <span className="text-slate-400">Products</span>
+          </nav>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-16">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-20 w-full">
 
         {/* Hero */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
-            ✦ A growing suite of AI tools
+        <div className="text-center mb-20">
+          <div className="flex justify-center mb-8">
+            <Logo size="lg" />
           </div>
-          <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-4">
-            AI tools for everything
+          <h1 className="text-5xl sm:text-6xl font-black text-slate-900 tracking-tight mb-5 leading-tight">
+            AI that actually<br />
+            <span className="text-indigo-600">gets things done</span>
           </h1>
-          <p className="text-xl text-slate-500 max-w-xl mx-auto">
-            Powerful AI applications for hiring, writing, research, and beyond — built for real people and real tasks.
+          <p className="text-lg text-slate-500 max-w-md mx-auto">
+            Purpose-built AI tools for hiring, writing, and beyond.
           </p>
         </div>
 
         {/* Live apps */}
-        <div className="mb-6">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Live applications</h2>
+        <div>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Applications</h2>
 
           {APPS.map(app => {
             const colors = COLOR_MAP[app.color]
             return (
               <div key={app.id} className={`rounded-3xl border p-8 mb-6 ${colors.card}`}>
-                <div className="flex items-start gap-4 mb-8">
-                  <span className="text-4xl">{app.emoji}</span>
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-2xl font-black text-slate-900">{app.title}</h3>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${colors.badge}`}>Live</span>
-                    </div>
-                    <p className="text-slate-500 text-base">{app.description}</p>
+                <div className="mb-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-2xl font-black text-slate-900">{app.title}</h3>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${colors.badge}`}>Live</span>
                   </div>
+                  <p className="text-slate-500 text-base">{app.description}</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -101,7 +133,9 @@ export default function HubPage() {
                           : `bg-white ${colors.btnOutline} hover:border-indigo-300`
                       }`}
                     >
-                      <span className="text-3xl shrink-0">{portal.icon}</span>
+                      <span className={`shrink-0 ${portal.primary ? 'text-white/90' : 'text-indigo-500'}`}>
+                        {portal.icon}
+                      </span>
                       <div>
                         <p className={`font-bold text-base ${portal.primary ? 'text-white' : 'text-slate-800'}`}>
                           {portal.label}
@@ -123,33 +157,26 @@ export default function HubPage() {
             )
           })}
         </div>
-
-        {/* Coming soon */}
-        <div>
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Coming soon</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {COMING_SOON.map(app => (
-              <div key={app.title} className="bg-white border border-slate-100 rounded-2xl p-6 opacity-60">
-                <span className="text-3xl mb-3 block">{app.emoji}</span>
-                <h3 className="font-bold text-slate-700 mb-1">{app.title}</h3>
-                <p className="text-sm text-slate-400">{app.description}</p>
-                <span className="inline-block mt-4 text-xs font-semibold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
-                  Coming soon
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-100 mt-20 py-8">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <span className="font-black text-indigo-600">ai</span>
-            <span className="font-black text-slate-700">pips</span>
+      <footer className="border-t border-slate-100 bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div>
+              <Logo size="sm" />
+              <p className="text-sm text-slate-400 mt-2 max-w-xs">
+                Purpose-built AI tools designed to save you time and help you do your best work.
+              </p>
+            </div>
+            <div className="flex flex-col sm:items-end gap-1 text-sm text-slate-400">
+              <div className="flex gap-5">
+                <Link href="/candidate/dashboard" className="hover:text-indigo-600 transition-colors">Job Seeker</Link>
+                <Link href="/jobs" className="hover:text-indigo-600 transition-colors">Hiring Manager</Link>
+              </div>
+              <p className="text-xs mt-3">© {new Date().getFullYear()} AI Pips. All rights reserved.</p>
+            </div>
           </div>
-          <p className="text-xs text-slate-400">AI tools for everyone</p>
         </div>
       </footer>
     </div>
