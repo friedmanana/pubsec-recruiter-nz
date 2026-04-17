@@ -56,6 +56,11 @@ export const candidateApi = {
       method: 'POST', body: JSON.stringify({ content_text }),
     }),
 
+  generateCv: (id: string, background_text: string) =>
+    fetchCandidate<CvDocument>(`/api/v1/candidate/applications/${id}/generate-cv`, {
+      method: 'POST', body: JSON.stringify({ background_text }),
+    }),
+
   enhanceCv: (id: string) =>
     fetchCandidate<CvDocument>(`/api/v1/candidate/applications/${id}/enhance-cv`, { method: 'POST' }),
 

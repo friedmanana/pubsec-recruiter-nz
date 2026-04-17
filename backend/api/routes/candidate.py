@@ -8,6 +8,7 @@ from agents.cv_enhancement_agent import (
     enhance_cover_letter,
     enhance_cv,
     generate_cover_letter,
+    generate_cv,
     generate_interview_qa,
 )
 from api.auth import get_current_user
@@ -46,6 +47,10 @@ class UpsertInterviewPrepRequest(BaseModel):
 
 class GenerateInterviewQARequest(BaseModel):
     pass  # uses stored data
+
+
+class GenerateCvRequest(BaseModel):
+    background_text: str
 
 
 class EnhanceCoverLetterRequest(BaseModel):
@@ -126,6 +131,29 @@ def upload_cv(app_id: str, body: UploadCvRequest, user: dict = Depends(get_curre
         "content_text": body.content_text,
         "content_html": _text_to_html(body.content_text),
     })
+
+
+@router.post("/applications/{app_id}/generate-cv")
+def generate_cv_route(app_id: str, body: GenerateCvRequest, user: dict = Depends(get_current_user)) -> dict:
+    _verify_ownership(app_id, user["user_id"])
+    app = db.get_job_application(app_id, user["user_id"])
+    try:
+        cv_text, cv_html = generate_cv(
+            background_text=body.background_text,
+            job_title=app.get("job_title", ""),
+            company=app.get("company", ""),
+            job_description=app.get("job_description_text", ""),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    result = db.save_cv_document({
+        "application_id": app_id,
+        "type": "ORIGINAL",
+        "content_text": cv_text,
+        "content_html": cv_html,
+    })
+    db.update_job_application(app_id, {"status": "IN_PROGRESS"})
+    return result
 
 
 @router.post("/applications/{app_id}/enhance-cv")

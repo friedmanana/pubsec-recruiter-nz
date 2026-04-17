@@ -48,6 +48,10 @@ export default function ApplicationWorkspace() {
   const [enhancingCl, setEnhancingCl] = useState(false)
   const [savingCl, setSavingCl] = useState(false)
 
+  const [cvMode, setCvMode] = useState<'scratch' | 'enhance'>('enhance')
+  const [backgroundInput, setBackgroundInput] = useState('')
+  const [generatingCvFromScratch, setGeneratingCvFromScratch] = useState(false)
+
   const [cvInput, setCvInput] = useState('')
   const [jdInput, setJdInput] = useState('')
   const [jobTitle, setJobTitle] = useState('')
@@ -116,6 +120,25 @@ export default function ApplicationWorkspace() {
       setOriginalCv(saved); flash('CV saved')
     } catch (e) { setError(String(e)) }
     finally { setSavingCv(false) }
+  }
+
+  const handleGenerateCvFromScratch = async () => {
+    if (!backgroundInput.trim()) return
+    if (jdInput !== app?.job_description_text) await handleSaveJob()
+    setGeneratingCvFromScratch(true); setError(null)
+    try {
+      const generated = await candidateApi.generateCv(id, backgroundInput)
+      setOriginalCv(generated)
+      setCvInput(generated.content_text)
+      // Auto-enhance immediately after generating
+      setEnhancing(true)
+      try {
+        const enhanced = await candidateApi.enhanceCv(id)
+        setEnhancedCv(enhanced)
+      } finally { setEnhancing(false) }
+      flash('CV generated and enhanced')
+    } catch (e) { setError(String(e)) }
+    finally { setGeneratingCvFromScratch(false) }
   }
 
   const handleSaveJob = async () => {
@@ -284,33 +307,70 @@ export default function ApplicationWorkspace() {
       {/* ── Phase 1: CV ── */}
       {phase === 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          {/* LEFT — mode selector + inputs */}
           <div className="space-y-6">
 
-            {/* CV input */}
+            {/* Mode toggle + inputs */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Your CV</h2>
-                  <p className="text-sm text-slate-500 mt-0.5">Paste your current CV text below</p>
-                </div>
-                {cvInput.trim() && (
-                  <span className="text-sm text-slate-400 bg-slate-50 px-3 py-1 rounded-lg">{cvInput.split(/\s+/).filter(Boolean).length} words</span>
-                )}
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Your CV</h2>
+              <p className="text-sm text-slate-500 mb-5">Choose how you want to create your CV</p>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <button
+                  onClick={() => setCvMode('enhance')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${cvMode === 'enhance' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <span className="text-2xl">✨</span>
+                  <span className={`text-sm font-semibold ${cvMode === 'enhance' ? 'text-indigo-700' : 'text-slate-600'}`}>Enhance mine</span>
+                  <span className="text-xs text-slate-400 text-center">Paste your CV, AI tailors it for this role</span>
+                </button>
+                <button
+                  onClick={() => setCvMode('scratch')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${cvMode === 'scratch' ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-slate-300'}`}
+                >
+                  <span className="text-2xl">🤖</span>
+                  <span className={`text-sm font-semibold ${cvMode === 'scratch' ? 'text-green-700' : 'text-slate-600'}`}>Write from scratch</span>
+                  <span className="text-xs text-slate-400 text-center">Describe your background, AI writes your CV</span>
+                </button>
               </div>
-              <textarea
-                value={cvInput}
-                onChange={e => setCvInput(e.target.value)}
-                rows={16}
-                placeholder={"Paste your CV here…\n\nInclude work experience, education, skills, and achievements."}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono leading-relaxed"
-              />
-              <button
-                onClick={handleSaveCv}
-                disabled={savingCv || !cvInput.trim()}
-                className="mt-3 px-5 py-2.5 bg-slate-700 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                {savingCv ? 'Saving…' : originalCv ? '✓ Update CV' : 'Save CV'}
-              </button>
+
+              {cvMode === 'enhance' ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-semibold text-slate-700">Paste your existing CV</label>
+                    {cvInput.trim() && (
+                      <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">{cvInput.split(/\s+/).filter(Boolean).length} words</span>
+                    )}
+                  </div>
+                  <textarea
+                    value={cvInput}
+                    onChange={e => setCvInput(e.target.value)}
+                    rows={14}
+                    placeholder={"Paste your CV here…\n\nInclude work experience, education, skills, and achievements."}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono leading-relaxed"
+                  />
+                  <button
+                    onClick={handleSaveCv}
+                    disabled={savingCv || !cvInput.trim()}
+                    className="mt-3 px-5 py-2.5 bg-slate-700 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    {savingCv ? 'Saving…' : originalCv ? '✓ Update CV' : 'Save CV'}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tell us about your background</label>
+                  <p className="text-xs text-slate-400 mb-3">Include your work history, education, key skills, and any achievements — bullet points or plain text are fine</p>
+                  <textarea
+                    value={backgroundInput}
+                    onChange={e => setBackgroundInput(e.target.value)}
+                    rows={14}
+                    placeholder={"e.g.\n\nWorked at Ministry of Education 2019–2024 as a Policy Analyst\n- Led Treaty of Waitangi policy review\n- Stakeholder engagement with iwi\n\nBefore that: Wellington City Council, Senior Advisor 2015–2019\n\nEducation: BA Political Science, Victoria University 2014\n\nSkills: policy analysis, data reporting, stakeholder comms"}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-green-500 resize-none leading-relaxed"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Job Description */}
@@ -327,7 +387,7 @@ export default function ApplicationWorkspace() {
               <textarea
                 value={jdInput}
                 onChange={e => setJdInput(e.target.value)}
-                rows={12}
+                rows={10}
                 placeholder="Paste the full job description here…"
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
               />
@@ -340,29 +400,50 @@ export default function ApplicationWorkspace() {
               </button>
             </div>
 
-            {/* Enhance button */}
-            <button
-              onClick={handleEnhanceCv}
-              disabled={enhancing || !canEnhance}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-base font-bold rounded-2xl transition-colors flex items-center justify-center gap-3 shadow-md"
-            >
-              {enhancing ? (
-                <><Spinner />Enhancing your CV… this takes ~20 seconds</>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  {enhancedCv ? '✨ Re-enhance CV with AI' : '✨ Enhance CV with AI'}
-                </>
-              )}
-            </button>
-            {!canEnhance && (
-              <p className="text-sm text-amber-600 text-center font-medium">Paste your CV above to get started</p>
+            {/* Action button */}
+            {cvMode === 'enhance' ? (
+              <>
+                <button
+                  onClick={handleEnhanceCv}
+                  disabled={enhancing || !canEnhance}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-base font-bold rounded-2xl transition-colors flex items-center justify-center gap-3 shadow-md"
+                >
+                  {enhancing ? (
+                    <><Spinner />Enhancing your CV… this takes ~20 seconds</>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      {enhancedCv ? '✨ Re-enhance CV with AI' : '✨ Enhance CV with AI'}
+                    </>
+                  )}
+                </button>
+                {!canEnhance && (
+                  <p className="text-sm text-amber-600 text-center font-medium">Paste your CV above to get started</p>
+                )}
+              </>
+            ) : (
+              <button
+                onClick={handleGenerateCvFromScratch}
+                disabled={generatingCvFromScratch || enhancing || !backgroundInput.trim()}
+                className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-base font-bold rounded-2xl transition-colors flex items-center justify-center gap-3 shadow-md"
+              >
+                {generatingCvFromScratch || enhancing ? (
+                  <><Spinner />{generatingCvFromScratch ? 'Writing your CV… (~20s)' : 'Tailoring for this role…'}</>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    🤖 Generate CV with AI
+                  </>
+                )}
+              </button>
             )}
           </div>
 
-          {/* Enhanced CV output */}
+          {/* RIGHT — Enhanced CV output */}
           <div>
             <div className={`bg-white rounded-2xl p-6 border shadow-sm h-full ${enhancedCv ? 'border-indigo-200' : 'border-slate-200'}`}>
               <div className="flex items-center justify-between mb-4">
@@ -373,7 +454,7 @@ export default function ApplicationWorkspace() {
                   <p className="text-sm text-slate-500 mt-0.5">
                     {enhancedCv
                       ? `Tailored for ${app.job_title}${app.company ? ` at ${app.company}` : ''}`
-                      : 'Will appear here after you click Enhance'}
+                      : 'Will appear here after generation'}
                   </p>
                 </div>
                 {enhancedCv && (
@@ -391,12 +472,14 @@ export default function ApplicationWorkspace() {
                   dangerouslySetInnerHTML={{ __html: enhancedCv.content_html }}
                 />
               ) : (
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-16 text-center text-slate-300">
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-16 text-center text-slate-300 flex flex-col items-center justify-center h-[calc(100%-60px)]">
                   <svg className="w-14 h-14 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <p className="text-base font-medium">Your enhanced CV will appear here</p>
-                  <p className="text-sm mt-1">Paste your CV and click Enhance</p>
+                  <p className="text-sm mt-1">
+                    {cvMode === 'enhance' ? 'Paste your CV and click Enhance' : 'Describe your background and click Generate'}
+                  </p>
                 </div>
               )}
             </div>

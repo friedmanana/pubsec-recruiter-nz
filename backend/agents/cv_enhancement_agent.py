@@ -45,6 +45,36 @@ def _call_llm(prompt: str) -> str:
         raise RuntimeError(f"LLM call failed: {exc}") from exc
 
 
+def generate_cv(
+    background_text: str,
+    job_title: str,
+    company: str,
+    job_description: str,
+) -> tuple[str, str]:
+    """Generate a structured CV from raw background information. Returns (text, html)."""
+    at_company = f" at {company}" if company else ""
+    jd_section = "JOB DESCRIPTION:\n" + job_description + "\n\n" if job_description.strip() else ""
+
+    prompt = (
+        f"Write a professional, well-structured CV for a {job_title} role{at_company} "
+        "based on the background information below.\n\n"
+        f"{jd_section}"
+        f"CANDIDATE BACKGROUND:\n{background_text}\n\n"
+        "Instructions:\n"
+        "1. Organise into clear sections: PROFESSIONAL SUMMARY, EXPERIENCE, EDUCATION, SKILLS, KEY ACHIEVEMENTS\n"
+        "2. Write a compelling professional summary tailored to this role\n"
+        "3. Format each role with: job title, organisation, dates, and 3-5 bullet points of accomplishments\n"
+        "4. Use strong action verbs and quantify achievements wherever the background info allows\n"
+        "5. Mirror key terminology from the job description if provided\n"
+        "6. Surface NZ public sector competencies where relevant (policy, stakeholder engagement, Treaty awareness, public service values)\n"
+        "7. Professional NZ English throughout — do not invent facts not present in the background info\n\n"
+        "Return ONLY the CV text, no preamble or commentary."
+    )
+
+    cv_text = _call_llm(prompt)
+    return cv_text, _text_to_html(cv_text)
+
+
 def enhance_cv(
     cv_text: str,
     job_title: str,
