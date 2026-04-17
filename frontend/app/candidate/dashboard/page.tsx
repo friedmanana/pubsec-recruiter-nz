@@ -13,9 +13,9 @@ const STATUS_CONFIG = {
 }
 
 const PHASE_STEPS = [
-  { icon: '🗂️', label: 'CV Enhancement' },
+  { icon: '📝', label: 'CV Enhancement' },
   { icon: '✍🏼', label: 'Cover Letter' },
-  { icon: '🏆', label: 'Interview Prep' },
+  { icon: '🎤', label: 'Interview Prep' },
 ]
 
 export default function CandidateDashboard() {
