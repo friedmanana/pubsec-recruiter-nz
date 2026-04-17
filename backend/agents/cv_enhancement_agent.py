@@ -222,6 +222,7 @@ def generate_interview_qa(
     focus_areas: str,
     interviewer_roles: str = "",
     num_questions: int = 12,
+    categories: list[str] | None = None,
 ) -> list[dict]:
     """Generate interview Q&A. Returns list of {question, answer, category, tip} dicts."""
     import json
@@ -273,9 +274,14 @@ def generate_interview_qa(
         "and one thing to watch out for.\n\n"
         "Return ONLY a JSON array, no other text:\n"
         '[{"category": "...", "question": "...", "answer": "...", "tip": "..."}, ...]\n\n'
-        "Spread across NZ public sector competencies: policy analysis, stakeholder engagement, "
-        "Te Tiriti o Waitangi obligations, public service values, evidence-based decision making, "
-        "change management, relationship management, leadership."
+        + (
+            f"QUESTION TYPES REQUESTED: focus ONLY on these categories: {', '.join(categories)}. "
+            "Do not include questions from other categories.\n\n"
+            if categories else
+            "Spread across NZ public sector competencies: policy analysis, stakeholder engagement, "
+            "Te Tiriti o Waitangi obligations, public service values, evidence-based decision making, "
+            "change management, relationship management, leadership.\n\n"
+        )
     )
 
     raw = _call_llm(prompt)
