@@ -5,19 +5,19 @@ const APPS = [
     id: 'recruitment',
     emoji: '🏢',
     title: 'Recruitment Suite',
-    description: 'AI-powered hiring tools for NZ public sector roles — from job posting to candidate screening.',
+    description: 'Smart hiring tools powered by AI — from creating job listings to screening candidates and preparing for interviews.',
     color: 'indigo',
     portals: [
       {
         label: 'Hiring Manager',
-        description: 'Post jobs, screen candidates, manage pipeline',
+        description: 'Post jobs, screen candidates, manage your pipeline',
         href: '/jobs',
         icon: '👔',
         primary: true,
       },
       {
-        label: 'Candidate Portal',
-        description: 'Enhance your CV, write cover letters, prep for interviews',
+        label: 'Job Seeker',
+        description: 'Build your CV, write cover letters, ace your interview',
         href: '/candidate/dashboard',
         icon: '🎯',
         primary: false,
@@ -27,8 +27,8 @@ const APPS = [
 ]
 
 const COMING_SOON = [
-  { emoji: '📊', title: 'Policy Analyser', description: 'AI-assisted policy review and drafting for government teams.' },
-  { emoji: '📝', title: 'Report Writer', description: 'Generate structured reports and briefings in minutes.' },
+  { emoji: '📊', title: 'Content Studio', description: 'Generate blogs, social posts, and marketing copy in seconds.' },
+  { emoji: '📝', title: 'Document Writer', description: 'Create structured reports, proposals, and briefs effortlessly.' },
   { emoji: '🔍', title: 'Research Assistant', description: 'Deep research and summarisation across multiple sources.' },
 ]
 
@@ -52,7 +52,7 @@ export default function HubPage() {
             <span className="text-xl font-black text-indigo-600 tracking-tight">ai</span>
             <span className="text-xl font-black text-slate-800 tracking-tight">pips</span>
           </div>
-          <span className="text-xs text-slate-400 font-medium">AI-powered tools for modern work</span>
+          <span className="text-xs text-slate-400 font-medium">AI tools for everyone</span>
         </div>
       </header>
 
@@ -61,13 +61,13 @@ export default function HubPage() {
         {/* Hero */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
-            ✦ AI-powered productivity suite
+            ✦ A growing suite of AI tools
           </div>
           <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-4">
-            Work smarter with AI
+            AI tools for everything
           </h1>
           <p className="text-xl text-slate-500 max-w-xl mx-auto">
-            A growing suite of AI tools built for real work — hiring, writing, research, and more.
+            Powerful AI applications for hiring, writing, research, and beyond — built for real people and real tasks.
           </p>
         </div>
 
@@ -149,7 +149,7 @@ export default function HubPage() {
             <span className="font-black text-indigo-600">ai</span>
             <span className="font-black text-slate-700">pips</span>
           </div>
-          <p className="text-xs text-slate-400">AI tools for modern work</p>
+          <p className="text-xs text-slate-400">AI tools for everyone</p>
         </div>
       </footer>
     </div>
