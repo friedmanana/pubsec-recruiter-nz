@@ -45,29 +45,66 @@ def _call_llm(prompt: str) -> str:
         raise RuntimeError(f"LLM call failed: {exc}") from exc
 
 
+def _cv_length_instruction(pages: str) -> str:
+    if pages == "1":
+        return "LENGTH: Exactly 1 page — be ruthlessly concise, keep only the most impactful points, no filler."
+    if pages == "3+":
+        return "LENGTH: 3 or more pages — include full detail on every role, comprehensive skills, and all achievements."
+    return "LENGTH: 2 pages — balance detail with conciseness."
+
+
+def _cv_style_instruction(style: str) -> str:
+    if style == "concise":
+        return "STYLE: Concise and punchy — short bullet points, minimal prose, scannable."
+    if style == "detailed":
+        return "STYLE: Detailed and thorough — explain context, impact, and scope for each role."
+    return "STYLE: Professional and polished — clear, confident language with strong action verbs."
+
+
+def _cl_length_instruction(length: str) -> str:
+    if length == "short":
+        return "LENGTH: Short — 2-3 tight paragraphs, no more than half a page."
+    if length == "detailed":
+        return "LENGTH: Detailed — 5-6 paragraphs with specific examples and context."
+    return "LENGTH: Standard — 3-4 paragraphs, one page."
+
+
+def _cl_tone_instruction(tone: str) -> str:
+    if tone == "conversational":
+        return "TONE: Warm and conversational — friendly, personable, genuine; avoid stiff formal language."
+    if tone == "formal":
+        return "TONE: Formal — traditional business letter style, measured and authoritative."
+    return "TONE: Professional — confident and warm NZ public sector style."
+
+
 def generate_cv(
     background_text: str,
     job_title: str,
     company: str,
     job_description: str,
+    pages: str = "2",
+    style: str = "professional",
 ) -> tuple[str, str]:
     """Generate a structured CV from raw background information. Returns (text, html)."""
     at_company = f" at {company}" if company else ""
     jd_section = "JOB DESCRIPTION:\n" + job_description + "\n\n" if job_description.strip() else ""
+    length_instr = _cv_length_instruction(pages)
+    style_instr = _cv_style_instruction(style)
 
     prompt = (
         f"Write a professional, well-structured CV for a {job_title} role{at_company} "
         "based on the background information below.\n\n"
+        f"{length_instr}\n{style_instr}\n\n"
         f"{jd_section}"
         f"CANDIDATE BACKGROUND:\n{background_text}\n\n"
         "Instructions:\n"
         "1. Organise into clear sections: PROFESSIONAL SUMMARY, EXPERIENCE, EDUCATION, SKILLS, KEY ACHIEVEMENTS\n"
         "2. Write a compelling professional summary tailored to this role\n"
-        "3. Format each role with: job title, organisation, dates, and 3-5 bullet points of accomplishments\n"
+        "3. Format each role with: job title, organisation, dates, and bullet points of accomplishments\n"
         "4. Use strong action verbs and quantify achievements wherever the background info allows\n"
         "5. Mirror key terminology from the job description if provided\n"
         "6. Surface NZ public sector competencies where relevant (policy, stakeholder engagement, Treaty awareness, public service values)\n"
-        "7. Professional NZ English throughout — do not invent facts not present in the background info\n\n"
+        "7. Do not invent facts not present in the background info\n\n"
         "Return ONLY the CV text, no preamble or commentary."
     )
 
@@ -80,13 +117,18 @@ def enhance_cv(
     job_title: str,
     company: str,
     job_description: str,
+    pages: str = "2",
+    style: str = "professional",
 ) -> tuple[str, str]:
     """Enhance a CV for a specific role. Returns (enhanced_text, enhanced_html)."""
     at_company = f" at {company}" if company else ""
     jd_section = "JOB DESCRIPTION:\n" + job_description + "\n\n" if job_description.strip() else ""
+    length_instr = _cv_length_instruction(pages)
+    style_instr = _cv_style_instruction(style)
 
     prompt = (
         f"Enhance and tailor the following CV for a {job_title} role{at_company}.\n\n"
+        f"{length_instr}\n{style_instr}\n\n"
         f"{jd_section}"
         f"ORIGINAL CV:\n{cv_text}\n\n"
         "Instructions:\n"
@@ -94,8 +136,7 @@ def enhance_cv(
         "2. Use strong action verbs and quantify achievements where possible\n"
         "3. Mirror key terminology from the job description if provided\n"
         "4. Surface NZ public sector competencies where relevant (policy, stakeholder engagement, Treaty awareness, public service values)\n"
-        "5. Ensure professional NZ English throughout\n"
-        "6. Keep all facts accurate — do not invent experience\n\n"
+        "5. Keep all facts accurate — do not invent experience\n\n"
         "Return ONLY the enhanced CV text ready to copy. Use clear section headings "
         "(PROFESSIONAL SUMMARY, EXPERIENCE, EDUCATION, SKILLS, KEY ACHIEVEMENTS). No commentary."
     )
@@ -109,23 +150,26 @@ def generate_cover_letter(
     job_title: str,
     company: str,
     job_description: str,
+    length: str = "standard",
+    tone: str = "professional",
 ) -> tuple[str, str]:
     """Generate a tailored cover letter. Returns (text, html)."""
     at_company = f" at {company}" if company else ""
     jd_section = "JOB DESCRIPTION:\n" + job_description + "\n\n" if job_description.strip() else ""
+    length_instr = _cl_length_instruction(length)
+    tone_instr = _cl_tone_instruction(tone)
 
     prompt = (
-        f"Write a professional cover letter for a {job_title} role{at_company}.\n\n"
+        f"Write a cover letter for a {job_title} role{at_company}.\n\n"
+        f"{length_instr}\n{tone_instr}\n\n"
         f"{jd_section}"
         f"CANDIDATE CV:\n{cv_text}\n\n"
         "Requirements:\n"
-        "- 3-4 paragraphs, professional but warm NZ tone\n"
         "- Opening paragraph: genuine interest in this specific role and organisation\n"
         "- Middle paragraphs: draw directly from the CV to demonstrate fit — be specific\n"
         "- Reference NZ public service values / Treaty obligations where genuinely relevant\n"
         "- Closing: confident, forward-looking call to action\n"
-        "- Do NOT use 'I am writing to apply for' as opening\n"
-        "- Professional NZ English, no jargon\n\n"
+        "- Do NOT use 'I am writing to apply for' as opening\n\n"
         "Return ONLY the cover letter text starting with 'Dear Hiring Manager,' "
         "and ending with a sign-off line '[Your Name]'. No commentary."
     )
@@ -140,14 +184,19 @@ def enhance_cover_letter(
     company: str,
     job_description: str,
     cv_text: str,
+    length: str = "standard",
+    tone: str = "professional",
 ) -> tuple[str, str]:
     """Enhance a candidate's existing cover letter. Returns (text, html)."""
     at_company = f" at {company}" if company else ""
     jd_section = "JOB DESCRIPTION:\n" + job_description + "\n\n" if job_description.strip() else ""
     cv_section = "CANDIDATE CV (for context):\n" + cv_text + "\n\n" if cv_text.strip() else ""
+    length_instr = _cl_length_instruction(length)
+    tone_instr = _cl_tone_instruction(tone)
 
     prompt = (
         f"Enhance and improve the following cover letter for a {job_title} role{at_company}.\n\n"
+        f"{length_instr}\n{tone_instr}\n\n"
         f"{jd_section}"
         f"{cv_section}"
         f"EXISTING COVER LETTER:\n{existing_letter}\n\n"
@@ -155,9 +204,8 @@ def enhance_cover_letter(
         "- Keep the candidate's own voice and personal details — do not invent new experience\n"
         "- Strengthen the opening to be more compelling and specific\n"
         "- Tighten the language — remove clichés, passive voice, and filler phrases\n"
-        "- Better align the language with the job description keywords if provided\n"
-        "- Ensure a confident, forward-looking closing\n"
-        "- Professional NZ English throughout\n\n"
+        "- Better align with the job description keywords if provided\n"
+        "- Ensure a confident, forward-looking closing\n\n"
         "Return ONLY the enhanced cover letter text, starting with the salutation and ending with the sign-off. No commentary."
     )
 

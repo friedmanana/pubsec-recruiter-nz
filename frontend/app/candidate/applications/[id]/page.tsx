@@ -34,6 +34,34 @@ function Spinner() {
   )
 }
 
+function ParamPicker({ label, options, value, onChange }: {
+  label: string
+  options: { value: string; label: string }[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs font-semibold text-slate-500 w-16 shrink-0">{label}</span>
+      <div className="flex gap-1.5">
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+              value === opt.value
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function ApplicationWorkspace() {
   const { id } = useParams<{ id: string }>()
   const [app, setApp] = useState<JobApplication | null>(null)
@@ -51,6 +79,10 @@ export default function ApplicationWorkspace() {
   const [cvMode, setCvMode] = useState<'scratch' | 'enhance'>('enhance')
   const [backgroundInput, setBackgroundInput] = useState('')
   const [generatingCvFromScratch, setGeneratingCvFromScratch] = useState(false)
+  const [cvPages, setCvPages] = useState('2')
+  const [cvStyle, setCvStyle] = useState('professional')
+  const [clLength, setClLength] = useState('standard')
+  const [clTone, setClTone] = useState('professional')
 
   const [cvInput, setCvInput] = useState('')
   const [jdInput, setJdInput] = useState('')
@@ -127,13 +159,13 @@ export default function ApplicationWorkspace() {
     if (jdInput !== app?.job_description_text) await handleSaveJob()
     setGeneratingCvFromScratch(true); setError(null)
     try {
-      const generated = await candidateApi.generateCv(id, backgroundInput)
+      const generated = await candidateApi.generateCv(id, backgroundInput, cvPages, cvStyle)
       setOriginalCv(generated)
       setCvInput(generated.content_text)
       // Auto-enhance immediately after generating
       setEnhancing(true)
       try {
-        const enhanced = await candidateApi.enhanceCv(id)
+        const enhanced = await candidateApi.enhanceCv(id, cvPages, cvStyle)
         setEnhancedCv(enhanced)
       } finally { setEnhancing(false) }
       flash('CV generated and enhanced')
@@ -155,7 +187,7 @@ export default function ApplicationWorkspace() {
     if (jdInput !== app?.job_description_text) await handleSaveJob()
     setEnhancing(true); setError(null)
     try {
-      const enhanced = await candidateApi.enhanceCv(id)
+      const enhanced = await candidateApi.enhanceCv(id, cvPages, cvStyle)
       setEnhancedCv(enhanced)
     } catch (e) { setError(String(e)) }
     finally { setEnhancing(false) }
@@ -164,7 +196,7 @@ export default function ApplicationWorkspace() {
   const handleGenerateCl = async () => {
     setGeneratingCl(true); setError(null)
     try {
-      const cl = await candidateApi.generateCoverLetter(id)
+      const cl = await candidateApi.generateCoverLetter(id, clLength, clTone)
       setCoverLetter(cl); setClEditText(cl.content_text)
     } catch (e) { setError(String(e)) }
     finally { setGeneratingCl(false) }
@@ -174,7 +206,7 @@ export default function ApplicationWorkspace() {
     if (!ownLetterInput.trim()) return
     setEnhancingCl(true); setError(null)
     try {
-      const cl = await candidateApi.enhanceCoverLetter(id, ownLetterInput)
+      const cl = await candidateApi.enhanceCoverLetter(id, ownLetterInput, clLength, clTone)
       setCoverLetter(cl); setClEditText(cl.content_text)
     } catch (e) { setError(String(e)) }
     finally { setEnhancingCl(false) }
@@ -400,6 +432,31 @@ export default function ApplicationWorkspace() {
               </button>
             </div>
 
+            {/* CV Parameters */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 space-y-3">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Output settings</p>
+              <ParamPicker
+                label="Pages"
+                value={cvPages}
+                onChange={setCvPages}
+                options={[
+                  { value: '1', label: '1 page' },
+                  { value: '2', label: '2 pages' },
+                  { value: '3+', label: '3+ pages' },
+                ]}
+              />
+              <ParamPicker
+                label="Style"
+                value={cvStyle}
+                onChange={setCvStyle}
+                options={[
+                  { value: 'concise', label: 'Concise' },
+                  { value: 'professional', label: 'Professional' },
+                  { value: 'detailed', label: 'Detailed' },
+                ]}
+              />
+            </div>
+
             {/* Action button */}
             {cvMode === 'enhance' ? (
               <>
@@ -516,6 +573,31 @@ export default function ApplicationWorkspace() {
                   <span className={`text-sm font-semibold ${clMode === 'enhance' ? 'text-indigo-700' : 'text-slate-600'}`}>Enhance mine</span>
                   <span className="text-xs text-slate-400 text-center">Paste your letter, AI improves it</span>
                 </button>
+              </div>
+
+              {/* CL Parameters */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 space-y-3 mb-2">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Output settings</p>
+                <ParamPicker
+                  label="Length"
+                  value={clLength}
+                  onChange={setClLength}
+                  options={[
+                    { value: 'short', label: 'Short' },
+                    { value: 'standard', label: 'Standard' },
+                    { value: 'detailed', label: 'Detailed' },
+                  ]}
+                />
+                <ParamPicker
+                  label="Tone"
+                  value={clTone}
+                  onChange={setClTone}
+                  options={[
+                    { value: 'conversational', label: 'Conversational' },
+                    { value: 'professional', label: 'Professional' },
+                    { value: 'formal', label: 'Formal' },
+                  ]}
+                />
               </div>
 
               {clMode === 'scratch' ? (

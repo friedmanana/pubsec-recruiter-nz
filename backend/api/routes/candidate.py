@@ -51,10 +51,24 @@ class GenerateInterviewQARequest(BaseModel):
 
 class GenerateCvRequest(BaseModel):
     background_text: str
+    pages: str = "2"
+    style: str = "professional"
+
+
+class EnhanceCvRequest(BaseModel):
+    pages: str = "2"
+    style: str = "professional"
 
 
 class EnhanceCoverLetterRequest(BaseModel):
     existing_letter: str
+    length: str = "standard"
+    tone: str = "professional"
+
+
+class GenerateCoverLetterRequest(BaseModel):
+    length: str = "standard"
+    tone: str = "professional"
 
 
 class SaveCoverLetterRequest(BaseModel):
@@ -143,6 +157,8 @@ def generate_cv_route(app_id: str, body: GenerateCvRequest, user: dict = Depends
             job_title=app.get("job_title", ""),
             company=app.get("company", ""),
             job_description=app.get("job_description_text", ""),
+            pages=body.pages,
+            style=body.style,
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -157,7 +173,7 @@ def generate_cv_route(app_id: str, body: GenerateCvRequest, user: dict = Depends
 
 
 @router.post("/applications/{app_id}/enhance-cv")
-def enhance_cv_route(app_id: str, user: dict = Depends(get_current_user)) -> dict:
+def enhance_cv_route(app_id: str, body: EnhanceCvRequest = EnhanceCvRequest(), user: dict = Depends(get_current_user)) -> dict:
     _verify_ownership(app_id, user["user_id"])
     app = db.get_job_application(app_id, user["user_id"])
     original = db.get_latest_cv(app_id, "ORIGINAL")
@@ -169,6 +185,8 @@ def enhance_cv_route(app_id: str, user: dict = Depends(get_current_user)) -> dic
             job_title=app.get("job_title", ""),
             company=app.get("company", ""),
             job_description=app.get("job_description_text", ""),
+            pages=body.pages,
+            style=body.style,
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -183,7 +201,7 @@ def enhance_cv_route(app_id: str, user: dict = Depends(get_current_user)) -> dic
 
 
 @router.post("/applications/{app_id}/cover-letter")
-def generate_cover_letter_route(app_id: str, user: dict = Depends(get_current_user)) -> dict:
+def generate_cover_letter_route(app_id: str, body: GenerateCoverLetterRequest = GenerateCoverLetterRequest(), user: dict = Depends(get_current_user)) -> dict:
     _verify_ownership(app_id, user["user_id"])
     app = db.get_job_application(app_id, user["user_id"])
     cv = db.get_latest_cv(app_id, "ENHANCED") or db.get_latest_cv(app_id, "ORIGINAL")
@@ -195,6 +213,8 @@ def generate_cover_letter_route(app_id: str, user: dict = Depends(get_current_us
             job_title=app.get("job_title", ""),
             company=app.get("company", ""),
             job_description=app.get("job_description_text", ""),
+            length=body.length,
+            tone=body.tone,
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -212,6 +232,8 @@ def enhance_cover_letter_route(app_id: str, body: EnhanceCoverLetterRequest, use
             company=app.get("company", ""),
             job_description=app.get("job_description_text", ""),
             cv_text=cv["content_text"] if cv else "",
+            length=body.length,
+            tone=body.tone,
         )
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

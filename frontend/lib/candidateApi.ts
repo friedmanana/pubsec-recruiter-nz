@@ -56,20 +56,24 @@ export const candidateApi = {
       method: 'POST', body: JSON.stringify({ content_text }),
     }),
 
-  generateCv: (id: string, background_text: string) =>
+  generateCv: (id: string, background_text: string, pages: string, style: string) =>
     fetchCandidate<CvDocument>(`/api/v1/candidate/applications/${id}/generate-cv`, {
-      method: 'POST', body: JSON.stringify({ background_text }),
+      method: 'POST', body: JSON.stringify({ background_text, pages, style }),
     }),
 
-  enhanceCv: (id: string) =>
-    fetchCandidate<CvDocument>(`/api/v1/candidate/applications/${id}/enhance-cv`, { method: 'POST' }),
+  enhanceCv: (id: string, pages: string, style: string) =>
+    fetchCandidate<CvDocument>(`/api/v1/candidate/applications/${id}/enhance-cv`, {
+      method: 'POST', body: JSON.stringify({ pages, style }),
+    }),
 
-  generateCoverLetter: (id: string) =>
-    fetchCandidate<CoverLetter>(`/api/v1/candidate/applications/${id}/cover-letter`, { method: 'POST' }),
+  generateCoverLetter: (id: string, length: string, tone: string) =>
+    fetchCandidate<CoverLetter>(`/api/v1/candidate/applications/${id}/cover-letter`, {
+      method: 'POST', body: JSON.stringify({ length, tone }),
+    }),
 
-  enhanceCoverLetter: (id: string, existing_letter: string) =>
+  enhanceCoverLetter: (id: string, existing_letter: string, length: string, tone: string) =>
     fetchCandidate<CoverLetter>(`/api/v1/candidate/applications/${id}/enhance-cover-letter`, {
-      method: 'POST', body: JSON.stringify({ existing_letter }),
+      method: 'POST', body: JSON.stringify({ existing_letter, length, tone }),
     }),
 
   saveCoverLetter: (id: string, content_text: string) =>
