@@ -5,10 +5,6 @@ const APPS = [
     id: 'recruitment',
     title: 'Hiring Kit',
     description: '',
-    descriptionParts: [
-      { label: 'For job seekers', text: 'Build a standout CV, nail your cover letter, and walk into interviews ready.' },
-      { label: 'For hiring managers', text: 'Post roles, screen applicants, and move the right people forward — fast.' },
-    ],
     color: 'indigo',
     portals: [
       {
@@ -119,18 +115,7 @@ export default function HubPage() {
                     <h3 className="text-2xl font-black text-slate-900">{app.title}</h3>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${colors.badge}`}>Live</span>
                   </div>
-                  {app.descriptionParts ? (
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      {app.descriptionParts.map(part => (
-                        <div key={part.label} className="flex-1 bg-white/70 rounded-xl px-4 py-3 border border-indigo-100/60">
-                          <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-1">{part.label}</p>
-                          <p className="text-sm text-slate-600">{part.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 text-base">{app.description}</p>
-                  )}
+                  {app.description && <p className="text-slate-500 text-base">{app.description}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
