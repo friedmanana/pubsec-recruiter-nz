@@ -32,24 +32,20 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient()
 
-    // Listen for PASSWORD_RECOVERY event — Supabase fires this when the
-    // hash fragment from the reset email is processed by the client SDK
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    // The auth callback has already exchanged the code and set a session
+    // in cookies — just check for it. Also listen for PASSWORD_RECOVERY
+    // in case the implicit (hash) flow is used.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setReady(true)
       }
     })
 
-    // Also check if already in a recovery session (page refresh case)
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setReady(true)
     })
 
-    // If no recovery event fires within 5s, show timeout message
-    const timeout = setTimeout(() => {
-      setTimedOut(true)
-    }, 5000)
-
+    const timeout = setTimeout(() => setTimedOut(true), 6000)
     return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [])
 

@@ -22,10 +22,5 @@ export async function GET(request: Request) {
     console.error('Auth callback error:', e)
   }
 
-  // For password recovery, always go to reset-password page
-  if (type === 'recovery') {
-    return NextResponse.redirect(`${origin}/reset-password`)
-  }
-
   return NextResponse.redirect(`${origin}${next}`)
 }
