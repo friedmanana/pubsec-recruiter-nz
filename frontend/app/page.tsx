@@ -10,7 +10,7 @@ const APPS = [
       {
         label: 'Hiring Manager',
         description: 'Post jobs, screen candidates, manage your pipeline',
-        href: '/jobs/login',
+        href: '/login?next=/jobs/new',
         icon: (
           <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
@@ -22,7 +22,7 @@ const APPS = [
       {
         label: 'Job Seeker',
         description: 'Build your CV, write cover letters, ace your interview',
-        href: '/candidate/dashboard',
+        href: '/login?next=/candidate/dashboard',
         icon: (
           <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -83,10 +83,14 @@ export default function HubPage() {
       <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Logo size="sm" />
-          <nav className="hidden sm:flex items-center gap-6 text-sm text-slate-500 font-medium">
-            <span className="text-slate-300">|</span>
-            <span className="text-slate-400">Products</span>
-          </nav>
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+              Sign in
+            </Link>
+            <Link href="/login?tab=signup" className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-full transition-colors">
+              Get started
+            </Link>
+          </div>
         </div>
       </header>
 
