@@ -58,7 +58,14 @@ function LoginForm() {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${next}`,
         },
       })
-      if (error) { setError(error.message); return }
+      if (error) {
+        if (error.message.includes('rate limit')) {
+          setError('Too many sign-up attempts. Please wait a few minutes and try again.')
+        } else {
+          setError(error.message)
+        }
+        return
+      }
       if (data.session) { router.push(next); router.refresh() }
       else setStep('confirm-sent')
     } catch (err: unknown) {
