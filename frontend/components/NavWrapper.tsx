@@ -7,6 +7,7 @@ export default function NavWrapper() {
   const pathname = usePathname()
   const isCandidatePage = pathname.startsWith('/candidate')
   const isHomePage = pathname === '/'
-  if (isCandidatePage || isHomePage) return null
+  const isAuthPage = pathname === '/login' || pathname === '/reset-password'
+  if (isCandidatePage || isHomePage || isAuthPage) return null
   return <Nav />
 }

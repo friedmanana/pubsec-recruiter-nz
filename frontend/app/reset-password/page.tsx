@@ -27,14 +27,30 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [ready, setReady] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
 
   useEffect(() => {
-    // Supabase sets the session from the URL hash after redirect
     const supabase = createClient()
+
+    // Listen for PASSWORD_RECOVERY event — Supabase fires this when the
+    // hash fragment from the reset email is processed by the client SDK
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setReady(true)
+      }
+    })
+
+    // Also check if already in a recovery session (page refresh case)
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setReady(true)
-      else setError('Invalid or expired reset link. Please request a new one.')
     })
+
+    // If no recovery event fires within 5s, show timeout message
+    const timeout = setTimeout(() => {
+      setTimedOut(true)
+    }, 5000)
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [])
 
   const handleReset = async (e: React.FormEvent) => {
@@ -112,9 +128,14 @@ export default function ResetPasswordPage() {
                     {loading ? 'Updating…' : 'Update password'}
                   </button>
                 </form>
-              ) : !error ? (
+              ) : timedOut ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-slate-500 mb-3">This link has expired or is invalid.</p>
+                  <Link href="/login" className="text-sm text-indigo-600 hover:underline">Request a new reset link →</Link>
+                </div>
+              ) : (
                 <div className="text-center py-4 text-slate-400 text-sm">Verifying your link…</div>
-              ) : null}
+              )}
             </>
           )}
         </div>
