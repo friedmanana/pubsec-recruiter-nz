@@ -98,6 +98,22 @@ class UpdateJobRequest(BaseModel):
     raw_jd_text: str
 
 
+class UpdateJobStatusRequest(BaseModel):
+    status: str
+
+
+@router.patch("/{job_id}/status")
+def update_job_status(job_id: str, body: UpdateJobStatusRequest) -> dict:
+    """Update the status of a job (DRAFT, OPEN, CLOSED, FILLED)."""
+    valid = {"DRAFT", "OPEN", "CLOSED", "FILLED"}
+    if body.status not in valid:
+        raise HTTPException(status_code=422, detail=f"status must be one of {valid}")
+    try:
+        return db.update_job_status(job_id, body.status)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+
+
 @router.patch("/{job_id}")
 def update_job(job_id: str, body: UpdateJobRequest) -> dict:
     """Update the raw job description text."""

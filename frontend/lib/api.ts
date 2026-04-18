@@ -17,9 +17,22 @@ export const api = {
 
   getJob: (id: string) => fetchAPI<Job>(`/api/v1/jobs/${id}`),
 
+  deleteJob: (id: string) =>
+    fetchAPI(`/api/v1/jobs/${id}`, { method: 'DELETE' }),
+
   updateJob: (id: string, raw_text: string) =>
     fetchAPI<Job>(`/api/v1/jobs/${id}`, {
-      method: 'PATCH', body: JSON.stringify({ raw_text }),
+      method: 'PATCH', body: JSON.stringify({ raw_jd_text: raw_text }),
+    }),
+
+  updateJobStatus: (id: string, status: string) =>
+    fetchAPI<Job>(`/api/v1/jobs/${id}/status`, {
+      method: 'PATCH', body: JSON.stringify({ status }),
+    }),
+
+  reanalyseJob: (id: string, raw_text: string) =>
+    fetchAPI<Job>(`/api/v1/jobs/${id}/reanalyse`, {
+      method: 'POST', body: JSON.stringify({ raw_jd_text: raw_text }),
     }),
 
   runPipeline: (rawJdText: string) =>
@@ -50,6 +63,18 @@ export const api = {
       body: JSON.stringify({}),
     })
   },
+
+  sourceAndScreenSourceOnly: (jobId: string) =>
+    fetchAPI(`/api/v1/jobs/${jobId}/source`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+
+  sourceAndScreenScreenOnly: (jobId: string) =>
+    fetchAPI(`/api/v1/jobs/${jobId}/screen`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
 
   uploadCVs: (jobId: string, cvTexts: string[]) =>
     fetchAPI<ScreeningResponse>(`/api/v1/jobs/${jobId}/upload-cvs`, {
