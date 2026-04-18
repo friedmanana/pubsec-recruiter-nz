@@ -207,7 +207,7 @@ def _sanitise_job(job_dict: dict) -> dict:
         "id", "title", "organisation", "department", "location",
         "salary_band", "employment_type", "closing_date", "overview",
         "responsibilities", "required_skills", "preferred_skills",
-        "qualifications", "competencies", "status", "raw_text",
+        "qualifications", "competencies", "status", "raw_jd_text",
     }
     return {k: v for k, v in job.items() if k in allowed}
 
@@ -307,11 +307,11 @@ def update_job_status(job_id: str, status: str) -> dict:
 
 @_retryable
 def update_job_raw_text(job_id: str, raw_text: str) -> dict:
-    """Update the raw_text (job description) of a job."""
+    """Update the raw_jd_text (job description) of a job."""
     client = get_client()
     response = (
         client.table("jobs")
-        .update({"raw_text": raw_text})
+        .update({"raw_jd_text": raw_text})
         .eq("id", job_id)
         .execute()
     )

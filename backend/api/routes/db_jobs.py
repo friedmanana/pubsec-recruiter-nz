@@ -95,14 +95,14 @@ def list_jobs(status: str | None = None) -> list[dict]:
 
 
 class UpdateJobRequest(BaseModel):
-    raw_text: str
+    raw_jd_text: str
 
 
 @router.patch("/{job_id}")
 def update_job(job_id: str, body: UpdateJobRequest) -> dict:
     """Update the raw job description text."""
     try:
-        return db.update_job_raw_text(job_id, body.raw_text)
+        return db.update_job_raw_text(job_id, body.raw_jd_text)
     except RuntimeError as exc:
         raise _handle_runtime_error(exc) from exc
 
@@ -448,7 +448,7 @@ def run_pipeline(body: RunFullPipelineRequest) -> FullPipelineResponse:
     job_dict = result.get("job", {})
     # Always persist the original JD text so it can be edited later
     if body.raw_jd_text:
-        job_dict["raw_text"] = body.raw_jd_text
+        job_dict["raw_jd_text"] = body.raw_jd_text
 
     try:
         saved_job = db.save_job(job_dict)
