@@ -44,6 +44,9 @@ export default function JobDetailPage() {
   const [sourcingStatus, setSourcingStatus] = useState<string | null>(null)
   const [selectedCandidate, setSelectedCandidate] = useState<ScreeningResult | null>(null)
   const [moveConfirm, setMoveConfirm] = useState<{ resultId: string; recommendation: Recommendation } | null>(null)
+  const [editingJD, setEditingJD] = useState(false)
+  const [editedJD, setEditedJD] = useState('')
+  const [savingJD, setSavingJD] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -103,6 +106,19 @@ export default function JobDetailPage() {
       await api.updateResultRecommendation(id, resultId, recommendation)
     } catch {
       await loadData()
+    }
+  }
+
+  const handleSaveJD = async () => {
+    setSavingJD(true)
+    try {
+      await api.updateJob(id, editedJD)
+      setJob(prev => prev ? { ...prev, raw_text: editedJD } : prev)
+      setEditingJD(false)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
+      setSavingJD(false)
     }
   }
 
@@ -282,6 +298,54 @@ export default function JobDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Job details */}
         <div className="lg:col-span-1 space-y-4">
+
+          {/* Edit Job Description */}
+          <div className="bg-white rounded-lg border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Job Description</h2>
+              {!editingJD && (
+                <button
+                  onClick={() => { setEditingJD(true); setEditedJD(job.raw_text ?? '') }}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
+            </div>
+            {editingJD ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editedJD}
+                  onChange={e => setEditedJD(e.target.value)}
+                  rows={12}
+                  className="w-full text-sm text-slate-700 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y font-mono"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveJD}
+                    disabled={savingJD}
+                    className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md disabled:opacity-60"
+                  >
+                    {savingJD ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => setEditingJD(false)}
+                    className="flex-1 py-1.5 border border-slate-300 text-slate-600 text-xs font-semibold rounded-md hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 whitespace-pre-wrap leading-relaxed line-clamp-6">
+                {job.raw_text ?? 'No description available.'}
+              </p>
+            )}
+          </div>
+
           {job.responsibilities && job.responsibilities.length > 0 && (
             <div className="bg-white rounded-lg border border-slate-200 p-5">
               <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">

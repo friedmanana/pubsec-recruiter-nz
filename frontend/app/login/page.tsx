@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 type Tab = 'signin' | 'signup'
-type Step = 'form' | 'confirm-sent'
+type Step = 'form' | 'confirm-sent' | 'forgot' | 'reset-sent'
 
 const LogoSVG = () => (
   <svg width="40" height="40" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -36,6 +36,21 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
 
   const switchTab = (t: Tab) => { setTab(t); setError(null); setStep('form') }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true); setError(null)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/login`,
+      })
+      if (error) setError(error.message)
+      else setStep('reset-sent')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally { setLoading(false) }
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,6 +86,49 @@ function LoginForm() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally { setLoading(false) }
+  }
+
+  if (step === 'reset-sent') {
+    return (
+      <div className="text-center py-6">
+        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold text-slate-800 mb-2">Check your inbox</h2>
+        <p className="text-sm text-slate-500 mb-1">We sent a password reset link to</p>
+        <p className="font-semibold text-slate-800 mb-4">{email}</p>
+        <button onClick={() => { setStep('form'); setError(null) }} className="text-sm text-indigo-600 hover:underline">
+          Back to sign in
+        </button>
+      </div>
+    )
+  }
+
+  if (step === 'forgot') {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-slate-800 mb-1">Reset your password</h2>
+        <p className="text-sm text-slate-400 mb-5">Enter your email and we'll send you a reset link.</p>
+        {error && <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
+        <form onSubmit={handleForgotPassword} className="space-y-4" autoComplete="off">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="off"
+              placeholder="you@example.com"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+          </div>
+          <button type="submit" disabled={loading}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
+            {loading ? 'Sending…' : 'Send reset link'}
+          </button>
+        </form>
+        <button onClick={() => { setStep('form'); setError(null) }} className="mt-4 w-full text-center text-sm text-slate-500 hover:text-slate-700">
+          ← Back to sign in
+        </button>
+      </>
+    )
   }
 
   if (step === 'confirm-sent') {
@@ -140,10 +198,10 @@ function LoginForm() {
             className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
-          <p className="text-center text-xs text-slate-400">
-            Don't have an account?{' '}
-            <button type="button" onClick={() => switchTab('signup')} className="text-indigo-600 hover:underline">Create one</button>
-          </p>
+          <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+            <button type="button" onClick={() => switchTab('signup')} className="text-indigo-600 hover:underline">Create an account</button>
+            <button type="button" onClick={() => { setStep('forgot'); setError(null) }} className="hover:text-slate-600">Forgot password?</button>
+          </div>
         </form>
       ) : (
         <form onSubmit={handleSignUp} className="space-y-4" autoComplete="off">

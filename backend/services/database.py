@@ -270,6 +270,19 @@ def update_job_status(job_id: str, status: str) -> dict:
     return response.data[0]
 
 
+@_retryable
+def update_job_raw_text(job_id: str, raw_text: str) -> dict:
+    """Update the raw_text (job description) of a job."""
+    client = get_client()
+    response = (
+        client.table("jobs")
+        .update({"raw_text": raw_text})
+        .eq("id", job_id)
+        .execute()
+    )
+    return response.data[0]
+
+
 # ---------------------------------------------------------------------------
 # Candidates CRUD
 # ---------------------------------------------------------------------------

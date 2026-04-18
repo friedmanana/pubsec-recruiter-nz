@@ -17,6 +17,11 @@ export const api = {
 
   getJob: (id: string) => fetchAPI<Job>(`/api/v1/jobs/${id}`),
 
+  updateJob: (id: string, raw_text: string) =>
+    fetchAPI<Job>(`/api/v1/jobs/${id}`, {
+      method: 'PATCH', body: JSON.stringify({ raw_text }),
+    }),
+
   runPipeline: (rawJdText: string) =>
     fetchAPI<PipelineResult>('/api/v1/jobs/pipeline', {
       method: 'POST',

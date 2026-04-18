@@ -94,6 +94,19 @@ def list_jobs(status: str | None = None) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+class UpdateJobRequest(BaseModel):
+    raw_text: str
+
+
+@router.patch("/{job_id}")
+def update_job(job_id: str, body: UpdateJobRequest) -> dict:
+    """Update the raw job description text."""
+    try:
+        return db.update_job_raw_text(job_id, body.raw_text)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+
+
 @router.get("/{job_id}")
 def get_job(job_id: str) -> dict:
     """Return a single job by ID, or 404 if not found."""
