@@ -1,57 +1,31 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-type Tab = 'signin' | 'signup'
+type Step = 'enter-email' | 'link-sent'
 
 export default function HiringLoginPage() {
-  const router = useRouter()
-  const [tab, setTab] = useState<Tab>('signin')
-  const [fullName, setFullName] = useState('')
+  const [step, setStep] = useState<Step>('enter-email')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      router.push('/jobs/new')
-      router.refresh()
-    }
-  }
-
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { emailRedirectTo: `${window.location.origin}/jobs/new` },
       })
-      if (error) { setError(error.message); return }
-      if (data.session) {
-        router.push('/jobs/new')
-        router.refresh()
+      if (error) {
+        setError(error.message)
       } else {
-        setSuccess(true)
+        setStep('link-sent')
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -60,28 +34,10 @@ export default function HiringLoginPage() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center bg-white rounded-2xl shadow-xl p-8">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-2">Check your email</h2>
-          <p className="text-sm text-slate-500">We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</p>
-          <button onClick={() => { setSuccess(false); setTab('signin') }} className="mt-6 inline-block text-sm text-indigo-600 hover:underline">
-            Back to sign in
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+
         {/* Brand */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 justify-center">
@@ -101,71 +57,78 @@ export default function HiringLoginPage() {
               <span className="text-slate-800"> Pips</span>
             </span>
           </Link>
-          <p className="text-slate-500 mt-2 text-sm">Hiring Hub</p>
+          <p className="text-slate-400 mt-2 text-sm font-medium">Hiring Hub</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Tabs */}
-          <div className="flex rounded-lg border border-slate-200 p-1 mb-6 text-sm">
-            <button
-              type="button"
-              onClick={() => { setTab('signin'); setError(null) }}
-              className={`flex-1 py-1.5 rounded-md font-medium transition-colors ${tab === 'signin' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTab('signup'); setError(null) }}
-              className={`flex-1 py-1.5 rounded-md font-medium transition-colors ${tab === 'signup' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Create account
-            </button>
-          </div>
+          {step === 'enter-email' ? (
+            <>
+              <h2 className="text-lg font-semibold text-slate-800 mb-1">Sign in or create an account</h2>
+              <p className="text-sm text-slate-400 mb-6">We'll send a secure sign-in link to your email — no password needed.</p>
 
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+              {error && (
+                <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+              )}
 
-          {tab === 'signin' ? (
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
-                {loading ? 'Signing in…' : 'Sign in'}
-              </button>
-            </form>
+              <form onSubmit={handleSendLink} className="space-y-4" autoComplete="off">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Work email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send sign-in link
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <p className="mt-5 text-xs text-slate-400 text-center">
+                A magic link will be emailed to you. Clicking it signs you in instantly — new accounts are created automatically.
+              </p>
+            </>
           ) : (
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Full name</label>
-                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Jane Smith"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+            <div className="text-center py-4">
+              <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min. 6 characters"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
-                {loading ? 'Creating account…' : 'Create account'}
+              <h2 className="text-lg font-semibold text-slate-800 mb-2">Check your inbox</h2>
+              <p className="text-sm text-slate-500 mb-1">We sent a sign-in link to</p>
+              <p className="text-sm font-semibold text-slate-800 mb-4">{email}</p>
+              <p className="text-xs text-slate-400">Click the link in that email to continue. You can close this tab.</p>
+              <button
+                onClick={() => { setStep('enter-email'); setError(null) }}
+                className="mt-6 text-sm text-indigo-600 hover:underline"
+              >
+                Use a different email
               </button>
-            </form>
+            </div>
           )}
         </div>
 
