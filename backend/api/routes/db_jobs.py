@@ -107,6 +107,25 @@ def update_job(job_id: str, body: UpdateJobRequest) -> dict:
         raise _handle_runtime_error(exc) from exc
 
 
+@router.post("/{job_id}/reanalyse")
+def reanalyse_job(job_id: str, body: UpdateJobRequest) -> dict:
+    """Save updated JD text and re-run AI analysis to refresh all structured fields."""
+    try:
+        from agents.job_analyst_agent import analyse_job  # type: ignore[import]
+        result = analyse_job(body.raw_jd_text, is_file_path=False)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    job_dict = result.get("job_description", result.get("job", {}))
+    job_dict["id"] = job_id
+    job_dict["raw_jd_text"] = body.raw_jd_text
+
+    try:
+        return db.save_job(job_dict)
+    except RuntimeError as exc:
+        raise _handle_runtime_error(exc) from exc
+
+
 @router.delete("/{job_id}")
 def delete_job(job_id: str) -> dict:
     """Delete a job and all its screening results."""
