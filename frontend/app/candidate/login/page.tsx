@@ -61,8 +61,8 @@ export default function CandidateLoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">Candidate Portal</h1>
-          <p className="text-slate-500 mt-1 text-sm">NZ Public Sector Career Assistant</p>
+          <h1 className="text-2xl font-bold text-slate-900">Job Seeker</h1>
+          <p className="text-slate-500 mt-1 text-sm">AI Pips · Your career, powered by AI</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">

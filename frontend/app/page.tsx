@@ -3,7 +3,7 @@ import Link from 'next/link'
 const APPS = [
   {
     id: 'recruitment',
-    title: 'Hiring Kit',
+    title: 'Hiring Hub',
     description: '',
     color: 'indigo',
     portals: [

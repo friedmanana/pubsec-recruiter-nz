@@ -21,7 +21,7 @@ function LogoMark() {
         <span className="text-indigo-600">AI</span>
         <span className="text-slate-800"> Pips</span>
       </span>
-      <span className="hidden sm:inline text-xs text-slate-400 font-medium border border-slate-200 rounded-full px-2 py-0.5 ml-1">Hiring Kit</span>
+      <span className="hidden sm:inline text-xs text-slate-400 font-medium border border-slate-200 rounded-full px-2 py-0.5 ml-1">Hiring Hub</span>
     </div>
   )
 }
