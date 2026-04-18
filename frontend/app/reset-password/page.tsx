@@ -26,38 +26,26 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
-  const [ready, setReady] = useState(false)
-  const [timedOut, setTimedOut] = useState(false)
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    // The auth callback has already exchanged the code and set a session
-    // in cookies — just check for it. Also listen for PASSWORD_RECOVERY
-    // in case the implicit (hash) flow is used.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        setReady(true)
-      }
-    })
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true)
-    })
-
-    const timeout = setTimeout(() => setTimedOut(true), 6000)
-    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
-  }, [])
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirm) { setError('Passwords do not match.'); return }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
     setLoading(true); setError(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password })
-    if (error) { setError(error.message); setLoading(false) }
-    else { setDone(true); setTimeout(() => router.push('/login'), 2500) }
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        setError('This link has expired. Please request a new reset link.')
+        setLoading(false)
+      } else {
+        setDone(true)
+        setTimeout(() => router.push('/login'), 2500)
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -93,45 +81,40 @@ export default function ResetPasswordPage() {
                 <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
               )}
 
-              {ready ? (
-                <form onSubmit={handleReset} className="space-y-4" autoComplete="off">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">New password</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                      autoComplete="off"
-                      placeholder="Min. 6 characters"
-                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Confirm password</label>
-                    <input
-                      type="password"
-                      value={confirm}
-                      onChange={e => setConfirm(e.target.value)}
-                      required
-                      autoComplete="off"
-                      placeholder="Repeat your password"
-                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-                  <button type="submit" disabled={loading}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
-                    {loading ? 'Updating…' : 'Update password'}
-                  </button>
-                </form>
-              ) : timedOut ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-slate-500 mb-3">This link has expired or is invalid.</p>
-                  <Link href="/login" className="text-sm text-indigo-600 hover:underline">Request a new reset link →</Link>
+              <form onSubmit={handleReset} className="space-y-4" autoComplete="off">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">New password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    autoComplete="off"
+                    placeholder="Min. 6 characters"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
                 </div>
-              ) : (
-                <div className="text-center py-4 text-slate-400 text-sm">Verifying your link…</div>
-              )}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Confirm password</label>
+                  <input
+                    type="password"
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    required
+                    autoComplete="off"
+                    placeholder="Repeat your password"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <button type="submit" disabled={loading}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
+                  {loading ? 'Updating…' : 'Update password'}
+                </button>
+                <p className="text-center text-xs text-slate-400">
+                  Link not working?{' '}
+                  <Link href="/login" className="text-indigo-600 hover:underline">Request a new one</Link>
+                </p>
+              </form>
             </>
           )}
         </div>
