@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/candidate", tags=["candidate-portal"])
 
 
 class CreateApplicationRequest(BaseModel):
-    job_title: str
+    job_title: str = ""
     company: str = ""
     job_description_text: str = ""
 
