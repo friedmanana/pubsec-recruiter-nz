@@ -194,13 +194,80 @@ Use the available tools systematically: start with a broad LinkedIn X-Ray search
 )
 
 
+def _score_platform_candidate(candidate: dict, job_requirements: dict) -> dict:
+    """Score an internal platform candidate using their actual CV text."""
+    cv_preview = candidate.get("cv_text", "")[:2500]
+
+    prompt = f"""You are a recruitment specialist. Score this candidate against the job requirements.
+You have their actual CV — use it for an accurate assessment.
+
+Candidate:
+Name: {candidate.get('full_name', 'Unknown')}
+Target/Current Title: {candidate.get('current_title', 'Not specified')}
+
+CV:
+{cv_preview}
+
+Job Requirements:
+{json.dumps(job_requirements, indent=2)}
+
+Respond with a JSON object:
+- estimated_match_score: integer 0-100
+- reasoning: 2-3 sentence assessment of fit for this specific role
+- recommended_action: SHORTLIST, REVIEW, or SKIP
+- extracted_skills: list of up to 10 relevant skills found in the CV
+- years_experience: estimated years of relevant experience (integer)
+
+JSON only, no other text."""
+
+    scoring_agent = Agent(
+        system_prompt="You are a recruitment specialist. Return only valid JSON."
+    )
+    response_text = str(scoring_agent(prompt))
+
+    try:
+        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
+        scored = json.loads(json_match.group()) if json_match else {}
+    except (json.JSONDecodeError, AttributeError):
+        scored = {}
+
+    return {
+        "profile_id": candidate.get("profile_id", ""),
+        "name": candidate.get("full_name", "Unknown"),
+        "email": candidate.get("email", ""),
+        "current_title": candidate.get("current_title", ""),
+        "cv_text": candidate.get("cv_text", ""),
+        "source": "PLATFORM",
+        "url": "",
+        "estimated_match_score": scored.get("estimated_match_score", 50),
+        "reasoning": scored.get("reasoning", "Platform member — manual review recommended."),
+        "recommended_action": scored.get("recommended_action", "REVIEW"),
+        "extracted_skills": scored.get("extracted_skills", []),
+        "years_experience": scored.get("years_experience", 0),
+    }
+
+
 def run_sourcing(job: dict) -> dict:
-    """Take a job dict and return sourced and scored candidates."""
+    """Source and score candidates from both external (LinkedIn) and internal (platform) sources."""
     job_title = job.get("title", "")
     required_skills = job.get("required_skills", [])
     location = job.get("location", "New Zealand")
     organisation = job.get("organisation", "")
 
+    job_requirements = {
+        "title": job_title,
+        "organisation": organisation,
+        "location": location,
+        "required_skills": required_skills,
+        "preferred_skills": job.get("preferred_skills", []),
+        "qualifications": job.get("qualifications", []),
+        "competencies": job.get("competencies", []),
+        "years_experience_context": job.get("overview", ""),
+    }
+
+    # ------------------------------------------------------------------ #
+    # 1. External sourcing — LinkedIn X-Ray via DuckDuckGo                #
+    # ------------------------------------------------------------------ #
     initial_results = search_linkedin_profiles(
         job_title=job_title,
         skills=required_skills,
@@ -218,40 +285,49 @@ def run_sourcing(job: dict) -> dict:
         existing_results=initial_results,
     )
 
-    all_candidates = initial_results + refined_results
-
-    job_requirements = {
-        "title": job_title,
-        "organisation": organisation,
-        "location": location,
-        "required_skills": required_skills,
-        "preferred_skills": job.get("preferred_skills", []),
-        "qualifications": job.get("qualifications", []),
-        "competencies": job.get("competencies", []),
-        "years_experience_context": job.get("overview", ""),
-    }
-
-    scored_candidates = []
-    for candidate in all_candidates:
+    external_candidates = initial_results + refined_results
+    external_scored: list[dict] = []
+    for candidate in external_candidates:
         if not candidate.get("url"):
             continue
         score = score_candidate_from_snippet(
             candidate_snippet=candidate,
             job_requirements=job_requirements,
         )
-        scored_candidates.append(score)
+        score["source"] = "LINKEDIN_XRAY"
+        external_scored.append(score)
 
-    scored_candidates.sort(key=lambda x: x.get("estimated_match_score", 0), reverse=True)
+    # ------------------------------------------------------------------ #
+    # 2. Internal sourcing — AI Pips platform job seekers with CVs        #
+    # ------------------------------------------------------------------ #
+    internal_scored: list[dict] = []
+    try:
+        from services.database import get_platform_candidates_with_cvs
+        platform_candidates = get_platform_candidates_with_cvs()
+        for candidate in platform_candidates:
+            score = _score_platform_candidate(candidate, job_requirements)
+            if score.get("recommended_action") != "SKIP":
+                internal_scored.append(score)
+    except Exception:
+        pass  # Degrade gracefully if DB unavailable
 
-    shortlisted = [c for c in scored_candidates if c.get("recommended_action") == "SHORTLIST"]
-    for_review = [c for c in scored_candidates if c.get("recommended_action") == "REVIEW"]
+    # ------------------------------------------------------------------ #
+    # 3. Merge, sort, split                                               #
+    # ------------------------------------------------------------------ #
+    all_scored = internal_scored + external_scored  # platform candidates first
+    all_scored.sort(key=lambda x: x.get("estimated_match_score", 0), reverse=True)
+
+    shortlisted = [c for c in all_scored if c.get("recommended_action") == "SHORTLIST"]
+    for_review = [c for c in all_scored if c.get("recommended_action") == "REVIEW"]
 
     return {
         "job_title": job_title,
         "organisation": organisation,
-        "total_found": len(all_candidates),
-        "total_scored": len(scored_candidates),
+        "total_found": len(external_candidates) + len(internal_scored),
+        "total_scored": len(all_scored),
+        "total_platform": len(internal_scored),
+        "total_external": len(external_scored),
         "shortlisted": shortlisted,
         "for_review": for_review,
-        "all_scored": scored_candidates,
+        "all_scored": all_scored,
     }

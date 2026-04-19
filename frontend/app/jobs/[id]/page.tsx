@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { Job, ScreeningResult, JobStatus, Recommendation } from '@/types'
 import CandidateCard from '@/components/CandidateCard'
 import CandidateDetailModal from '@/components/CandidateDetailModal'
 import EmptyState from '@/components/EmptyState'
+
+type PipelineStep = 'analysing' | 'sourcing' | 'screening' | 'done' | 'error'
 
 type TabKey = 'shortlisted' | 'second_round' | 'all'
 
@@ -31,8 +33,10 @@ function formatDate(dateStr: string) {
   }
 }
 
-export default function JobDetailPage() {
+function JobDetailPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const id = params.id as string
 
   const [job, setJob] = useState<Job | null>(null)
@@ -46,7 +50,8 @@ export default function JobDetailPage() {
   const [moveConfirm, setMoveConfirm] = useState<{ resultId: string; recommendation: Recommendation } | null>(null)
   const [editingJD, setEditingJD] = useState(false)
   const [editedJD, setEditedJD] = useState('')
-  const [savingJD, setSavingJD] = useState(false)
+  const [pipelineStep, setPipelineStep] = useState<PipelineStep | null>(null)
+  const [pipelineError, setPipelineError] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -68,6 +73,14 @@ export default function JobDetailPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Auto-open editor if ?edit=true and job has loaded
+  useEffect(() => {
+    if (job && !loading && searchParams.get('edit') === 'true') {
+      setEditedJD(job.raw_jd_text ?? '')
+      setEditingJD(true)
+    }
+  }, [job, loading, searchParams])
 
   const handleRerun = async () => {
     setRerunning(true)
@@ -109,16 +122,29 @@ export default function JobDetailPage() {
     }
   }
 
-  const handleSaveJD = async () => {
-    setSavingJD(true)
+  const handleSaveAndReanalyse = async () => {
+    setPipelineError(null)
+    setPipelineStep('analysing')
     try {
-      await api.updateJob(id, editedJD)
-      setJob(prev => prev ? { ...prev, raw_text: editedJD } : prev)
-      setEditingJD(false)
+      // Step 1: re-analyse JD → updates structured fields
+      const updated = await api.reanalyseJob(id, editedJD)
+      setJob(updated)
+
+      // Step 2: source candidates
+      setPipelineStep('sourcing')
+      await api.sourceAndScreenSourceOnly(id)
+
+      // Step 3: screen
+      setPipelineStep('screening')
+      await api.sourceAndScreenScreenOnly(id)
+
+      setPipelineStep('done')
+      setTimeout(() => {
+        router.push('/jobs')
+      }, 1200)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSavingJD(false)
+      setPipelineError(err instanceof Error ? err.message : 'Pipeline failed')
+      setPipelineStep('error')
     }
   }
 
@@ -168,10 +194,10 @@ export default function JobDetailPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          All Jobs
+          All Roles
         </Link>
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="font-medium text-red-800">Failed to load job</p>
+          <p className="font-medium text-red-800">Failed to load role</p>
           <p className="text-sm text-red-600 mt-1 font-mono">{error}</p>
         </div>
       </div>
@@ -187,13 +213,13 @@ export default function JobDetailPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back link */}
       <Link
-        href="/"
+        href="/jobs"
         className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-6"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        All Jobs
+        All Roles
       </Link>
 
       {/* Job header */}
@@ -209,7 +235,10 @@ export default function JobDetailPage() {
               </span>
             </div>
             <p className="text-slate-600 font-medium">
-              {[job.organisation, job.department].filter(Boolean).join(' · ')}
+              {[
+                job.organisation !== 'Unknown Organisation' ? job.organisation : null,
+                job.department,
+              ].filter(Boolean).join(' · ')}
             </p>
           </div>
 
@@ -295,94 +324,20 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Job details */}
-        <div className="lg:col-span-1 space-y-4">
-
-          {/* Edit Job Description */}
-          <div className="bg-white rounded-lg border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Job Description</h2>
-              {!editingJD && (
-                <button
-                  onClick={() => { setEditingJD(true); setEditedJD(job.raw_text ?? '') }}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit
-                </button>
-              )}
-            </div>
-            {editingJD ? (
-              <div className="space-y-2">
-                <textarea
-                  value={editedJD}
-                  onChange={e => setEditedJD(e.target.value)}
-                  rows={12}
-                  className="w-full text-sm text-slate-700 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y font-mono"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveJD}
-                    disabled={savingJD}
-                    className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md disabled:opacity-60"
-                  >
-                    {savingJD ? 'Saving…' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => setEditingJD(false)}
-                    className="flex-1 py-1.5 border border-slate-300 text-slate-600 text-xs font-semibold rounded-md hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 whitespace-pre-wrap leading-relaxed line-clamp-6">
-                {job.raw_text ?? 'No description available.'}
-              </p>
-            )}
-          </div>
-
-          {job.responsibilities && job.responsibilities.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">
-                Responsibilities
-              </h2>
-              <ul className="space-y-1.5">
-                {job.responsibilities.map((r, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-slate-600">
-                    <span className="text-indigo-400 mt-0.5 flex-shrink-0">•</span>
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {job.required_skills && job.required_skills.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 p-5">
-              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">
-                Required Skills
-              </h2>
-              <div className="flex flex-wrap gap-1.5">
-                {job.required_skills.map((skill, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Skills strip */}
+      {job.required_skills && job.required_skills.length > 0 && (
+        <div className="bg-white rounded-lg border border-slate-200 px-5 py-3 mb-4 flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex-shrink-0">Skills</span>
+          {job.required_skills.map((skill, i) => (
+            <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">
+              {skill}
+            </span>
+          ))}
         </div>
+      )}
 
-        {/* Right: Candidates */}
-        <div className="lg:col-span-2">
+      {/* Full-width candidates */}
+      <div>
           {/* Tabs */}
           <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-lg w-fit">
             {tabs.map((tab) => (
@@ -511,7 +466,6 @@ export default function JobDetailPage() {
           )}
         </div>
       </div>
-    </div>
 
     {/* Candidate detail modal */}
     {selectedCandidate && (
@@ -527,6 +481,122 @@ export default function JobDetailPage() {
           setSelectedCandidate((prev) => prev ? { ...prev, ...fields } : prev)
         }}
       />
+    )}
+
+    {/* Full-screen JD editor modal */}
+    {editingJD && (
+      <div className="fixed inset-0 z-50 flex flex-col bg-white">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white flex-shrink-0">
+          <div>
+            <Link href="/jobs" className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              All Roles
+            </Link>
+            <h2 className="text-base font-semibold text-slate-900">Edit Role Description</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {[job.title, job.organisation !== 'Unknown Organisation' ? job.organisation : null].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400">{editedJD.length} characters</span>
+            <button
+              onClick={() => { setEditingJD(false); router.push('/jobs') }}
+              disabled={!!pipelineStep && pipelineStep !== 'error'}
+              className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveAndReanalyse}
+              disabled={!!pipelineStep && pipelineStep !== 'error'}
+              className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-60 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Save & Run Pipeline
+            </button>
+          </div>
+        </div>
+        {/* Pipeline progress overlay or editor */}
+        {pipelineStep ? (
+          <div className="flex-1 flex items-center justify-center bg-slate-50 px-8">
+            <div className="w-full max-w-xl">
+              {pipelineStep === 'error' ? (
+                <div className="text-center">
+                  <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <p className="font-semibold text-slate-800 mb-1">Pipeline failed</p>
+                  <p className="text-sm text-red-600 mb-4">{pipelineError}</p>
+                  <button onClick={() => { setPipelineStep(null); setPipelineError(null) }}
+                    className="text-sm text-indigo-600 hover:underline">← Back to editor</button>
+                </div>
+              ) : (
+                <>
+                  {(() => {
+                    const steps = [
+                      { key: 'analysing', label: 'Analyse Role', desc: 'Extracting role requirements' },
+                      { key: 'sourcing',  label: 'Source Candidates', desc: 'Finding matching candidates' },
+                      { key: 'screening', label: 'Screen & Score', desc: 'Evaluating candidates' },
+                      { key: 'done',      label: 'Results Ready', desc: 'Pipeline complete' },
+                    ]
+                    const order: Record<string, number> = { analysing: 0, sourcing: 1, screening: 2, done: 3 }
+                    const currentIdx = order[pipelineStep] ?? 0
+                    return (
+                      <div className="bg-white rounded-xl border border-slate-200 p-8">
+                        <p className="text-sm font-medium text-slate-600 text-center mb-8">Running pipeline…</p>
+                        <div className="relative">
+                          <div className="absolute top-5 left-5 right-5 h-0.5 bg-slate-200" />
+                          <ol className="relative flex justify-between">
+                            {steps.map((s, idx) => {
+                              const done = idx < currentIdx
+                              const active = idx === currentIdx
+                              return (
+                                <li key={s.key} className="flex flex-col items-center gap-2 flex-1">
+                                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${done ? 'bg-indigo-600 border-indigo-600' : active ? 'bg-white border-indigo-600' : 'bg-white border-slate-300'}`}>
+                                    {done ? (
+                                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                    ) : active ? (
+                                      <svg className="w-5 h-5 text-indigo-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                      </svg>
+                                    ) : (
+                                      <span className="text-xs font-semibold text-slate-400">{idx + 1}</span>
+                                    )}
+                                  </div>
+                                  <div className="text-center">
+                                    <p className={`text-xs font-medium ${done || active ? 'text-slate-900' : 'text-slate-400'}`}>{s.label}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">{s.desc}</p>
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ol>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <textarea
+            value={editedJD}
+            onChange={e => setEditedJD(e.target.value)}
+            autoFocus
+            className="flex-1 w-full px-8 py-6 text-sm text-slate-800 leading-relaxed resize-none focus:outline-none font-mono bg-slate-50"
+            placeholder="Paste or type the full role description here…"
+          />
+        )}
+      </div>
     )}
 
     {/* Move confirmation dialog */}
@@ -571,5 +641,13 @@ export default function JobDetailPage() {
       )
     })()}
     </>
+  )
+}
+
+export default function JobDetailPageWrapper() {
+  return (
+    <Suspense>
+      <JobDetailPage />
+    </Suspense>
   )
 }

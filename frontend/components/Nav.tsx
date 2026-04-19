@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 function LogoMark() {
   return (
@@ -28,6 +29,13 @@ function LogoMark() {
 
 export default function Nav() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+  }
 
   return (
     <nav className="bg-white border-b border-slate-200">
@@ -39,7 +47,7 @@ export default function Nav() {
 
           <div className="flex items-center gap-1">
             <Link
-              href="/jobs/login"
+              href="/jobs"
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 pathname.startsWith('/jobs') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
@@ -54,6 +62,12 @@ export default function Nav() {
             >
               Account
             </Link>
+            <button
+              onClick={handleSignOut}
+              className="px-4 py-2 rounded-md text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </div>

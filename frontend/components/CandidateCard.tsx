@@ -75,6 +75,12 @@ export default function CandidateCard({ result, onClick, onMove, onDelete }: Can
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                {result.source === 'PLATFORM' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-600 text-white">
+                    <svg className="w-3 h-3" viewBox="0 0 52 52" fill="none"><circle cx="26" cy="16" r="5" fill="white" fillOpacity="0.9"/><circle cx="36" cy="26" r="5" fill="white"/><circle cx="16" cy="26" r="5" fill="white" fillOpacity="0.5"/><circle cx="26" cy="36" r="5" fill="white" fillOpacity="0.7"/></svg>
+                    On AI Pips
+                  </span>
+                )}
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rec.className}`}>
                   {rec.label}
                 </span>

@@ -186,18 +186,23 @@ def source_candidates(job_id: str) -> SourcingResponse:
     # Persist each sourced candidate
     try:
         for candidate in result.get("all_scored", []):
+            source = candidate.get("source", "LINKEDIN_XRAY")
             candidate_dict = {
                 "full_name": candidate.get("name", "Unknown"),
-                "current_title": candidate.get("title", ""),
+                "email": candidate.get("email") or None,
+                "current_title": candidate.get("current_title") or candidate.get("title", ""),
                 "current_organisation": "",
                 "location": candidate.get("location_hint", "New Zealand"),
-                "years_experience": 0,
-                "skills": [],
+                "years_experience": candidate.get("years_experience", 0),
+                "skills": candidate.get("extracted_skills", []),
                 "qualifications": [],
-                "summary": candidate.get("snippet", candidate.get("reasoning", "")),
-                "linkedin_url": candidate.get("url", ""),
-                "source": "LINKEDIN_XRAY",
+                "summary": candidate.get("reasoning", candidate.get("snippet", "")),
+                "linkedin_url": candidate.get("url", "") or None,
+                "raw_cv_text": candidate.get("cv_text") or None,
+                "source": source,
             }
+            if source == "PLATFORM" and candidate.get("profile_id"):
+                candidate_dict["candidate_profile_id"] = candidate["profile_id"]
             db.save_candidate(candidate_dict)
 
         # Record the sourcing run

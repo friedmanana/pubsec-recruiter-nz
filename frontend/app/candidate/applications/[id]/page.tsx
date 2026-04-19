@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { candidateApi } from '@/lib/candidateApi'
 import type { JobApplication, CvDocument, CoverLetter, QAItem } from '@/types'
@@ -62,14 +62,16 @@ function ParamPicker({ label, options, value, onChange }: {
   )
 }
 
-export default function ApplicationWorkspace() {
+function ApplicationWorkspace() {
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
   const [app, setApp] = useState<JobApplication | null>(null)
   const [originalCv, setOriginalCv] = useState<CvDocument | null>(null)
   const [enhancedCv, setEnhancedCv] = useState<CvDocument | null>(null)
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null)
   const [loading, setLoading] = useState(true)
-  const [phase, setPhase] = useState<Phase>(1)
+  const initialPhase = Math.min(3, Math.max(1, parseInt(searchParams.get('phase') ?? '1'))) as Phase
+  const [phase, setPhase] = useState<Phase>(initialPhase)
   const [clMode, setClMode] = useState<'scratch' | 'enhance'>('scratch')
   const [clEditText, setClEditText] = useState('')
   const [ownLetterInput, setOwnLetterInput] = useState('')
@@ -1013,5 +1015,13 @@ export default function ApplicationWorkspace() {
         )
       })()}
     </div>
+  )
+}
+
+export default function ApplicationWorkspacePage() {
+  return (
+    <Suspense>
+      <ApplicationWorkspace />
+    </Suspense>
   )
 }

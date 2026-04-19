@@ -1,12 +1,22 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { candidateApi } from '@/lib/candidateApi'
 
-export default function NewApplicationPage() {
+const PHASE_LABELS: Record<string, string> = {
+  '1': 'CV Enhancement',
+  '2': 'Cover Letter',
+  '3': 'Interview Prep',
+}
+
+function NewApplicationForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const phase = searchParams.get('phase') ?? '1'
+  const toolLabel = PHASE_LABELS[phase] ?? 'Workspace'
+
   const [jobTitle, setJobTitle] = useState('')
   const [company, setCompany] = useState('')
   const [jdText, setJdText] = useState('')
@@ -24,7 +34,7 @@ export default function NewApplicationPage() {
         company: company.trim(),
         job_description_text: jdText.trim(),
       })
-      router.push(`/candidate/applications/${app.id}`)
+      router.push(`/candidate/applications/${app.id}?phase=${phase}`)
     } catch (err) {
       setError(String(err))
       setSaving(false)
@@ -35,10 +45,10 @@ export default function NewApplicationPage() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <Link href="/candidate/dashboard" className="text-sm text-slate-500 hover:text-slate-700">
-          ← Back to applications
+          ← Back
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mt-3">New Application</h1>
-        <p className="text-sm text-slate-500 mt-1">Add a job you are applying for to start tailoring your CV</p>
+        <h1 className="text-2xl font-bold text-slate-900 mt-3">Start {toolLabel}</h1>
+        <p className="text-sm text-slate-500 mt-1">Tell us about the role — the AI will tailor everything to it.</p>
       </div>
 
       {error && (
@@ -102,5 +112,13 @@ export default function NewApplicationPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function NewApplicationPage() {
+  return (
+    <Suspense>
+      <NewApplicationForm />
+    </Suspense>
   )
 }

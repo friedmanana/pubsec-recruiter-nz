@@ -136,7 +136,7 @@ function JobCard({ job, onDelete, onStatusChange }: { job: Job; onDelete: (id: s
             <Link
               href={`/jobs/${job.id}?edit=true`}
               className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-              title="Edit job description"
+              title="Edit role description"
               onClick={e => e.stopPropagation()}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -146,7 +146,7 @@ function JobCard({ job, onDelete, onStatusChange }: { job: Job; onDelete: (id: s
             <button
               onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
               className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-              title="Delete job"
+              title="Delete role"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -166,7 +166,7 @@ function JobCard({ job, onDelete, onStatusChange }: { job: Job; onDelete: (id: s
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-slate-900 text-center mb-1">Delete this job?</h3>
+            <h3 className="text-base font-semibold text-slate-900 text-center mb-1">Delete this role?</h3>
             <p className="text-sm text-slate-500 text-center mb-1">{job.title}</p>
             <p className="text-xs text-slate-400 text-center mb-6">This will also delete all candidates and screening results. This cannot be undone.</p>
             <div className="flex gap-3">
@@ -237,7 +237,7 @@ export default function JobsDashboard() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          New Job
+          New Role
         </Link>
       </div>
 
@@ -265,7 +265,7 @@ export default function JobsDashboard() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Post a Job
+            Post a Role
           </Link>
         </div>
       ) : (

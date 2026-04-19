@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -34,6 +34,21 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(true)
+
+  // If already signed in, skip the login page and go straight to destination
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace(next)
+      } else {
+        setChecking(false)
+      }
+    })
+  }, [next, router])
+
+  if (checking) return null
 
   const switchTab = (t: Tab) => { setTab(t); setError(null); setStep('form') }
 

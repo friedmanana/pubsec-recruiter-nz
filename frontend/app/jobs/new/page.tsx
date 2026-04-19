@@ -77,9 +77,9 @@ export default function NewJobPage() {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Post a New Job</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Post a New Role</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Paste your job description and run the full AI recruitment pipeline
+          Paste your role description and run the full AI recruitment pipeline
         </p>
       </div>
 
@@ -89,7 +89,7 @@ export default function NewJobPage() {
           htmlFor="jd-text"
           className="block text-sm font-medium text-slate-700 mb-2"
         >
-          Job Description
+          Role Description
         </label>
         <textarea
           id="jd-text"
@@ -103,7 +103,7 @@ export default function NewJobPage() {
 
         <div className="mt-4 flex items-center justify-between gap-4">
           <p className="text-xs text-slate-500">
-            {text.length > 0 ? `${text.length} characters` : 'Paste your JD above'}
+            {text.length > 0 ? `${text.length} characters` : 'Paste your role description above'}
           </p>
           <button
             onClick={runPipeline}
@@ -137,7 +137,7 @@ export default function NewJobPage() {
             step={step}
             message={
               step === 'analysing'
-                ? 'Parsing and structuring the job description…'
+                ? 'Parsing and structuring the role description…'
                 : step === 'sourcing'
                 ? 'Searching for matching candidates in NZ…'
                 : step === 'screening'

@@ -164,9 +164,17 @@ export default function CandidateDetailModal({ result, onClose, onMove, onDelete
               {result.location && result.location !== 'New Zealand' && (
                 <p className="text-xs text-slate-500 mt-0.5">{result.location}</p>
               )}
-              <span className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rec.color}`}>
-                {rec.label}
-              </span>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rec.color}`}>
+                  {rec.label}
+                </span>
+                {result.source === 'PLATFORM' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-600 text-white">
+                    <svg className="w-3 h-3" viewBox="0 0 52 52" fill="none"><circle cx="26" cy="16" r="5" fill="white" fillOpacity="0.9"/><circle cx="36" cy="26" r="5" fill="white"/><circle cx="16" cy="26" r="5" fill="white" fillOpacity="0.5"/><circle cx="26" cy="36" r="5" fill="white" fillOpacity="0.7"/></svg>
+                    On AI Pips — CV available
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button

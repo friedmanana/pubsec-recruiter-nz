@@ -10,7 +10,7 @@ const APPS = [
       {
         label: 'Hiring Manager',
         description: 'Post jobs, screen candidates, manage your pipeline',
-        href: '/login?next=/jobs/new',
+        href: '/login?next=/jobs',
         icon: (
           <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
@@ -83,14 +83,6 @@ export default function HubPage() {
       <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Logo size="sm" />
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-              Sign in
-            </Link>
-            <Link href="/login?tab=signup" className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-full transition-colors">
-              Get started
-            </Link>
-          </div>
         </div>
       </header>
 
@@ -170,10 +162,6 @@ export default function HubPage() {
               </p>
             </div>
             <div className="flex flex-col sm:items-end gap-1 text-sm text-slate-400">
-              <div className="flex gap-5">
-                <Link href="/candidate/dashboard" className="hover:text-indigo-600 transition-colors">Job Seeker</Link>
-                <Link href="/jobs" className="hover:text-indigo-600 transition-colors">Hiring Manager</Link>
-              </div>
               <p className="text-xs mt-3">© {new Date().getFullYear()} AI Pips. All rights reserved.</p>
             </div>
           </div>

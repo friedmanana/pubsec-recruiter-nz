@@ -89,10 +89,10 @@ export default function UploadCVsPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Job
+          Back to Role
         </Link>
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="font-medium text-red-800">Failed to load job</p>
+          <p className="font-medium text-red-800">Failed to load role</p>
           <p className="text-sm text-red-600 mt-1 font-mono">{jobError}</p>
         </div>
       </div>

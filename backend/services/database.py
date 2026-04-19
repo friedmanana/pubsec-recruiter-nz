@@ -763,6 +763,96 @@ def delete_integration(provider: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Internal sourcing — fetch platform job seekers with CVs
+# ---------------------------------------------------------------------------
+
+
+@_retryable
+def get_platform_candidates_with_cvs() -> list[dict]:
+    """Return all job seekers who have at least one CV document on the platform.
+
+    For each unique candidate profile, picks the best available CV
+    (ENHANCED > ORIGINAL, most recent first).
+
+    Returns a list of dicts with keys:
+        profile_id, full_name, email, cv_text, current_title
+    """
+    client = get_client()
+
+    # 1. Fetch all cv_documents that have content
+    cv_resp = (
+        client.table("cv_documents")
+        .select("application_id, type, content_text, created_at")
+        .not_.is_("content_text", "null")
+        .order("created_at", desc=True)
+        .execute()
+    )
+    if not cv_resp.data:
+        return []
+
+    # 2. Fetch corresponding job applications
+    app_ids = list({row["application_id"] for row in cv_resp.data})
+    apps_resp = (
+        client.table("job_applications")
+        .select("id, candidate_profile_id, job_title")
+        .in_("id", app_ids)
+        .execute()
+    )
+    app_map: dict[str, dict] = {row["id"]: row for row in apps_resp.data}
+
+    # 3. Fetch candidate profiles
+    profile_ids = list({row["candidate_profile_id"] for row in apps_resp.data if row.get("candidate_profile_id")})
+    if not profile_ids:
+        return []
+
+    profiles_resp = (
+        client.table("candidate_profiles")
+        .select("id, full_name, email")
+        .in_("id", profile_ids)
+        .execute()
+    )
+    profile_map: dict[str, dict] = {row["id"]: row for row in profiles_resp.data}
+
+    # 4. For each profile pick the best CV (ENHANCED beats ORIGINAL; already ordered by created_at desc)
+    best: dict[str, dict] = {}
+    for cv_row in cv_resp.data:
+        app = app_map.get(cv_row["application_id"])
+        if not app:
+            continue
+        pid = app.get("candidate_profile_id")
+        if not pid:
+            continue
+        existing = best.get(pid)
+        if existing is None:
+            best[pid] = {
+                "cv_text": cv_row["content_text"],
+                "cv_type": cv_row["type"],
+                "job_title": app.get("job_title", ""),
+            }
+        elif existing["cv_type"] != "ENHANCED" and cv_row["type"] == "ENHANCED":
+            best[pid] = {
+                "cv_text": cv_row["content_text"],
+                "cv_type": cv_row["type"],
+                "job_title": app.get("job_title", ""),
+            }
+
+    # 5. Build result list
+    results: list[dict] = []
+    for pid, cv_data in best.items():
+        profile = profile_map.get(pid)
+        if not profile or not cv_data.get("cv_text", "").strip():
+            continue
+        results.append({
+            "profile_id": pid,
+            "full_name": profile.get("full_name") or "Platform Member",
+            "email": profile.get("email", ""),
+            "cv_text": cv_data["cv_text"],
+            "current_title": cv_data.get("job_title", ""),
+        })
+    return results
+
+
+# ---------------------------------------------------------------------------
 # Candidate portal DB functions
 # ---------------------------------------------------------------------------
 

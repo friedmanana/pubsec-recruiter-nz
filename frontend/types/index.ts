@@ -1,6 +1,6 @@
 export type JobStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'FILLED'
 export type Recommendation = 'SHORTLIST' | 'SECOND_ROUND' | 'HOLD' | 'DECLINE'
-export type CandidateSource = 'DIRECT_APPLY' | 'LINKEDIN_XRAY' | 'SEEK' | 'TRADEME'
+export type CandidateSource = 'DIRECT_APPLY' | 'LINKEDIN_XRAY' | 'SEEK' | 'TRADEME' | 'PLATFORM'
 
 export interface Job {
   id: string
@@ -19,7 +19,7 @@ export interface Job {
   competencies: string[]
   status: JobStatus
   created_at: string
-  raw_text?: string
+  raw_jd_text?: string
 }
 
 export interface Candidate {
@@ -63,6 +63,8 @@ export interface ScreeningResult {
   years_experience?: number
   skills?: string[]
   summary?: string
+  source?: CandidateSource
+  candidate_profile_id?: string
 }
 
 export interface PipelineResult {
