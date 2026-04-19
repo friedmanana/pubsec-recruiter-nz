@@ -2,13 +2,27 @@ import type { Job, ScreeningResult, PipelineResult, ScreeningResponse, Communica
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').trim()
 
-async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
-  return res.json()
+async function fetchAPI<T>(path: string, options?: RequestInit, retries = 3): Promise<T> {
+  const url = `${BASE}${path}`
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      })
+      if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
+      return res.json()
+    } catch (err) {
+      // On network errors (cold start, transient failure) retry with backoff
+      const isNetworkErr = err instanceof TypeError
+      if (isNetworkErr && attempt < retries) {
+        await new Promise(r => setTimeout(r, attempt * 2000)) // 2s, 4s
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error('Failed after retries')
 }
 
 export const api = {

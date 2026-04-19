@@ -193,9 +193,10 @@ function JobDetailPage() {
   }
 
   if (error) {
+    const isNetwork = error.toLowerCase().includes('load failed') || error.toLowerCase().includes('failed to fetch') || error.toLowerCase().includes('network')
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link href="/" className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-6">
+        <Link href="/jobs" className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-6">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -203,7 +204,17 @@ function JobDetailPage() {
         </Link>
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
           <p className="font-medium text-red-800">Failed to load role</p>
-          <p className="text-sm text-red-600 mt-1 font-mono">{error}</p>
+          {isNetwork ? (
+            <p className="text-sm text-red-600 mt-1">The server may be waking up — this can take up to 30 seconds on first load.</p>
+          ) : (
+            <p className="text-sm text-red-600 mt-1 font-mono">{error}</p>
+          )}
+          <button
+            onClick={loadData}
+            className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     )
