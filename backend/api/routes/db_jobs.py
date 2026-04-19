@@ -181,7 +181,13 @@ def source_candidates(job_id: str) -> SourcingResponse:
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
 
-    result = run_sourcing(job)
+    try:
+        result = run_sourcing(job)
+    except Exception as exc:
+        import traceback
+        print(f"[source] run_sourcing crashed: {exc}")
+        traceback.print_exc()
+        raise HTTPException(status_code=503, detail=f"Sourcing failed: {exc}") from exc
 
     # Persist each sourced candidate
     try:
