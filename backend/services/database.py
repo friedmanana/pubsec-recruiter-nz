@@ -779,19 +779,22 @@ def get_platform_candidates_with_cvs() -> list[dict]:
     """
     client = get_client()
 
-    # 1. Fetch all cv_documents that have content
+    # 1. Fetch all cv_documents that have content (filter empty strings client-side)
     cv_resp = (
         client.table("cv_documents")
         .select("application_id, type, content_text, created_at")
-        .not_.is_("content_text", "null")
         .order("created_at", desc=True)
         .execute()
     )
     if not cv_resp.data:
         return []
+    # Drop rows with no meaningful CV content
+    cv_resp_data = [row for row in cv_resp.data if row.get("content_text", "").strip()]
+    if not cv_resp_data:
+        return []
 
     # 2. Fetch corresponding job applications
-    app_ids = list({row["application_id"] for row in cv_resp.data})
+    app_ids = list({row["application_id"] for row in cv_resp_data})
     apps_resp = (
         client.table("job_applications")
         .select("id, candidate_profile_id, job_title")
@@ -815,7 +818,7 @@ def get_platform_candidates_with_cvs() -> list[dict]:
 
     # 4. For each profile pick the best CV (ENHANCED beats ORIGINAL; already ordered by created_at desc)
     best: dict[str, dict] = {}
-    for cv_row in cv_resp.data:
+    for cv_row in cv_resp_data:
         app = app_map.get(cv_row["application_id"])
         if not app:
             continue

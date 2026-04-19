@@ -196,32 +196,48 @@ Use the available tools systematically: start with a broad LinkedIn X-Ray search
 
 def _score_platform_candidate(candidate: dict, job_requirements: dict) -> dict:
     """Score an internal platform candidate using their actual CV text."""
-    cv_preview = candidate.get("cv_text", "")[:2500]
+    cv_preview = candidate.get("cv_text", "")[:3000]
 
-    prompt = f"""You are a recruitment specialist. Score this candidate against the job requirements.
-You have their actual CV — use it for an accurate assessment.
+    prompt = f"""You are a senior recruitment specialist assessing candidate fit using SEMANTIC RELEVANCE — not exact title or keyword matching.
+
+Your goal: identify candidates whose SKILLS, EXPERIENCE, and CAPABILITIES are genuinely relevant to this role, even if:
+- Their job title differs from the role title
+- They come from an adjacent field or industry
+- They use different terminology for the same concepts
+- Their experience is transferable (e.g. a data scientist applying for an AI engineer role)
+
+Scoring guidance:
+- 80–100 (SHORTLIST): Strong overlap in core skills, relevant domain experience, clear ability to do the job
+- 55–79 (REVIEW): Meaningful transferable skills, adjacent experience, could grow into the role with some ramp-up
+- 0–54 (SKIP): Little to no relevant skills or experience overlap
 
 Candidate:
 Name: {candidate.get('full_name', 'Unknown')}
-Target/Current Title: {candidate.get('current_title', 'Not specified')}
+Current/Target Title: {candidate.get('current_title', 'Not specified')}
 
 CV:
 {cv_preview}
 
-Job Requirements:
+Role Requirements:
 {json.dumps(job_requirements, indent=2)}
 
-Respond with a JSON object:
+Think about:
+1. Which required skills does this candidate demonstrably have (even under different names)?
+2. Which experiences translate directly to what this role needs?
+3. What is their depth in the most critical areas of the role?
+4. Would a good hiring manager want to interview this person based on their background?
+
+Respond with a JSON object only:
 - estimated_match_score: integer 0-100
-- reasoning: 2-3 sentence assessment of fit for this specific role
+- reasoning: 2-3 sentences explaining the SPECIFIC skill and experience overlaps (or gaps) that drove the score
 - recommended_action: SHORTLIST, REVIEW, or SKIP
-- extracted_skills: list of up to 10 relevant skills found in the CV
-- years_experience: estimated years of relevant experience (integer)
+- extracted_skills: list of up to 10 skills found in the CV that are relevant to this role
+- years_experience: estimated years of directly relevant experience (integer)
 
 JSON only, no other text."""
 
     scoring_agent = Agent(
-        system_prompt="You are a recruitment specialist. Return only valid JSON."
+        system_prompt="You are a senior recruitment specialist. Assess candidates on genuine skill overlap and transferable experience, not keyword matching. Return only valid JSON."
     )
     response_text = str(scoring_agent(prompt))
 
