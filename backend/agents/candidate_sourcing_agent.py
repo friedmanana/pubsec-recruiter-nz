@@ -1,3 +1,14 @@
+"""
+Candidate Sourcing Agent — agentic, Groq-powered.
+
+The agent autonomously decides:
+  - Whether to search LinkedIn (external)
+  - Whether to fetch platform candidates from the DB (internal)
+  - How to score each candidate against the role
+  - When it has enough information to return results
+
+It uses Llama 3.3 70B on Groq via the core.agent engine.
+"""
 from __future__ import annotations
 
 import json
@@ -7,121 +18,364 @@ import re
 import httpx
 from duckduckgo_search import DDGS
 
+from core.agent import AgentTool, GroqAgent, agent_tool
 
+
+# ---------------------------------------------------------------------------
+# Tool: Search LinkedIn via DuckDuckGo X-Ray
+# ---------------------------------------------------------------------------
+
+@agent_tool(
+    description=(
+        "Search LinkedIn for candidates matching a job title and skills using DuckDuckGo X-Ray. "
+        "Returns a list of candidates with name, title, LinkedIn URL, and snippet."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "job_title": {"type": "string", "description": "The job title to search for"},
+            "skills":    {"type": "array",  "items": {"type": "string"}, "description": "Key skills to include in search"},
+            "location":  {"type": "string", "description": "Location, default 'New Zealand'"},
+            "max_results": {"type": "integer", "description": "Max results to return, default 10"},
+        },
+        "required": ["job_title"],
+    },
+)
 def search_linkedin_profiles(
     job_title: str,
-    skills: list[str],
+    skills: list[str] | None = None,
     location: str = "New Zealand",
     max_results: int = 10,
 ) -> list[dict]:
-    """Search for LinkedIn profiles matching a job title and skills using DuckDuckGo X-Ray search."""
+    skills = skills or []
     skills_query = " ".join(f'"{s}"' for s in skills[:4])
     query = f'site:linkedin.com/in/ "{job_title}" "{location}" {skills_query}'
-
     results = []
-    with DDGS() as ddgs:
-        for r in ddgs.text(query, max_results=max_results):
-            name, title = _parse_linkedin_title(r.get("title", ""))
-            location_hint = _extract_location_hint(r.get("body", ""))
-            results.append(
-                {
+    try:
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, max_results=max_results):
+                name, title = _parse_linkedin_title(r.get("title", ""))
+                results.append({
                     "name": name,
                     "title": title,
                     "url": r.get("href", ""),
                     "snippet": r.get("body", ""),
-                    "location_hint": location_hint,
-                }
-            )
-
+                    "location_hint": _extract_location_hint(r.get("body", "")),
+                    "source": "LINKEDIN_XRAY",
+                })
+    except Exception as exc:
+        print(f"[sourcing] LinkedIn search error: {exc}")
+    print(f"[sourcing] LinkedIn search returned {len(results)} results")
     return results
 
 
+# ---------------------------------------------------------------------------
+# Tool: Fetch platform candidates from the AI Pips database
+# ---------------------------------------------------------------------------
 
-def refine_candidate_search(
-    job_description: str,
-    existing_results: list[dict],
-) -> list[dict]:
-    """Run a second targeted DuckDuckGo X-Ray search using specific skills from the JD, deduplicating against existing results."""
-    existing_urls = {r.get("url", "") for r in existing_results}
-
-    skills = _extract_skills_from_text(job_description)
-    if not skills:
+@agent_tool(
+    description=(
+        "Fetch job seekers who have uploaded their CVs to the AI Pips platform. "
+        "Returns candidates with their full CV text for scoring. "
+        "Always call this — internal candidates are higher quality leads."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {},
+        "required": [],
+    },
+)
+def get_platform_candidates() -> list[dict]:
+    try:
+        from services.database import get_platform_candidates_with_cvs
+        candidates = get_platform_candidates_with_cvs()
+        print(f"[sourcing] platform candidates from DB: {len(candidates)}")
+        # Don't send full CV text to the agent context — return summary
+        return [
+            {
+                "profile_id": c.get("profile_id", ""),
+                "name": c.get("full_name", "Platform Member"),
+                "email": c.get("email", ""),
+                "current_title": c.get("current_title", ""),
+                "cv_length": len(c.get("cv_text", "")),
+                "cv_preview": c.get("cv_text", "")[:500],
+                "source": "PLATFORM",
+            }
+            for c in candidates
+        ]
+    except Exception as exc:
+        print(f"[sourcing] platform DB error: {exc}")
         return []
 
-    refined_query = f'site:linkedin.com/in/ "New Zealand" {" ".join(skills[:5])}'
 
-    new_results = []
-    with DDGS() as ddgs:
-        for r in ddgs.text(refined_query, max_results=10):
-            url = r.get("href", "")
-            if url in existing_urls:
-                continue
-            name, title = _parse_linkedin_title(r.get("title", ""))
-            location_hint = _extract_location_hint(r.get("body", ""))
-            new_results.append(
-                {
-                    "name": name,
-                    "title": title,
-                    "url": url,
-                    "snippet": r.get("body", ""),
-                    "location_hint": location_hint,
-                }
-            )
-            existing_urls.add(url)
+# ---------------------------------------------------------------------------
+# Tool: Score a candidate against job requirements
+# ---------------------------------------------------------------------------
 
-    return new_results
-
-
-
-def score_candidate_from_snippet(
-    candidate_snippet: dict,
-    job_requirements: dict,
+@agent_tool(
+    description=(
+        "Score a candidate against the job requirements using semantic relevance. "
+        "Uses skill overlap, transferable experience, and domain fit — not just keyword matching. "
+        "Call this for each candidate you want to evaluate."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "candidate_name":   {"type": "string"},
+            "candidate_title":  {"type": "string"},
+            "cv_or_snippet":    {"type": "string", "description": "CV text or LinkedIn snippet"},
+            "source":           {"type": "string", "description": "PLATFORM or LINKEDIN_XRAY"},
+            "profile_id":       {"type": "string", "description": "Profile ID if PLATFORM source"},
+            "email":            {"type": "string"},
+            "url":              {"type": "string", "description": "LinkedIn URL if external"},
+            "job_title":        {"type": "string"},
+            "job_requirements": {"type": "string", "description": "JSON string of job requirements"},
+        },
+        "required": ["candidate_name", "cv_or_snippet", "job_title", "job_requirements"],
+    },
+)
+def score_candidate(
+    candidate_name: str,
+    cv_or_snippet: str,
+    job_title: str,
+    job_requirements: str,
+    candidate_title: str = "",
+    source: str = "LINKEDIN_XRAY",
+    profile_id: str = "",
+    email: str = "",
+    url: str = "",
 ) -> dict:
-    """Use the LLM to score a candidate based on their LinkedIn snippet against job requirements.
+    prompt = f"""Score this candidate against the job requirements using SEMANTIC RELEVANCE.
+Consider transferable skills and adjacent experience — not just exact title/keyword matching.
 
-    Returns name, url, estimated_match_score (0-100), reasoning, and recommended_action.
-    """
-    prompt = f"""You are a NZ public sector recruitment specialist. Score this candidate against the job requirements.
+Candidate: {candidate_name}
+Title: {candidate_title or 'Not specified'}
+Source: {source}
 
-Candidate:
-Name: {candidate_snippet.get('name', 'Unknown')}
-Title: {candidate_snippet.get('title', 'Unknown')}
-LinkedIn: {candidate_snippet.get('url', '')}
-Snippet: {candidate_snippet.get('snippet', '')}
-Location hint: {candidate_snippet.get('location_hint', '')}
+CV / Profile:
+{cv_or_snippet[:3000]}
 
-Job Requirements:
-{json.dumps(job_requirements, indent=2)}
+Job: {job_title}
+Requirements: {job_requirements[:1500]}
 
-Respond with a JSON object containing:
-- estimated_match_score: integer 0-100
-- reasoning: 2-3 sentence assessment referencing NZ public sector fit
-- recommended_action: one of SHORTLIST, REVIEW, or SKIP
+Scoring guide:
+- 80-100 → SHORTLIST: Strong skill overlap, clearly can do the job
+- 55-79  → REVIEW: Meaningful transferable skills, adjacent experience
+- 0-54   → SKIP: Little relevant overlap
 
-JSON only, no other text."""
+Return JSON only:
+{{
+  "estimated_match_score": <0-100>,
+  "reasoning": "<2-3 sentences on specific skill/experience overlap>",
+  "recommended_action": "SHORTLIST|REVIEW|SKIP",
+  "extracted_skills": ["skill1", "skill2"],
+  "years_experience": <integer>
+}}"""
 
-    response_text = _call_groq(
-        system="You are a NZ public sector recruitment specialist. Return only valid JSON.",
-        user=prompt,
-    )
+    result = _call_groq(prompt)
 
     try:
-        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        scored = json.loads(json_match.group()) if json_match else {}
+        match = re.search(r"\{.*\}", result, re.DOTALL)
+        scored = json.loads(match.group()) if match else {}
     except (json.JSONDecodeError, AttributeError):
         scored = {}
 
     return {
-        "name": candidate_snippet.get("name", "Unknown"),
-        "url": candidate_snippet.get("url", ""),
-        "estimated_match_score": scored.get("estimated_match_score", 0),
-        "reasoning": scored.get("reasoning", "Unable to parse scoring response."),
+        "name": candidate_name,
+        "current_title": candidate_title,
+        "source": source,
+        "profile_id": profile_id,
+        "email": email,
+        "url": url,
+        "cv_text": cv_or_snippet if source == "PLATFORM" else "",
+        "estimated_match_score": scored.get("estimated_match_score", 50),
+        "reasoning": scored.get("reasoning", "Scoring unavailable — review manually."),
         "recommended_action": scored.get("recommended_action", "REVIEW"),
+        "extracted_skills": scored.get("extracted_skills", []),
+        "years_experience": scored.get("years_experience", 0),
     }
 
 
+# ---------------------------------------------------------------------------
+# Agent definition
+# ---------------------------------------------------------------------------
+
+_SYSTEM_PROMPT = """You are an expert NZ public sector recruitment specialist.
+
+Your job: find and score the best candidates for a given role using the tools available.
+
+Strategy:
+1. ALWAYS call get_platform_candidates() first — internal AI Pips users are high-value leads
+2. Search LinkedIn with search_linkedin_profiles() using the role title and key skills
+3. Score ALL candidates (both platform and LinkedIn) using score_candidate()
+4. Focus on SEMANTIC skill overlap, not exact title matching
+5. A data scientist can be great for an AI engineer role — look for transferable skills
+
+NZ public sector context:
+- Te Tiriti o Waitangi commitment matters
+- Wellington, Auckland, Christchurch are the main labour markets
+- Look for NZ citizenship/residency (often required for security clearance)
+- Public sector values: integrity, accountability, stewardship, service
+
+After scoring all candidates, summarise your findings: how many found, how many shortlisted,
+and the top candidates with their scores and reasoning."""
+
+_sourcing_agent = GroqAgent(
+    system_prompt=_SYSTEM_PROMPT,
+    tools=[search_linkedin_profiles, get_platform_candidates, score_candidate],
+    max_iterations=20,
+    temperature=0.2,
+)
+
+
+# ---------------------------------------------------------------------------
+# Public interface — called by the API route
+# ---------------------------------------------------------------------------
+
+def run_sourcing(job: dict) -> dict:
+    """
+    Run the sourcing agent for a job. Returns structured results dict
+    compatible with SourcingResponse.
+    """
+    job_title = job.get("title", "")
+    organisation = job.get("organisation", "")
+
+    job_requirements = {
+        "title": job_title,
+        "organisation": organisation,
+        "location": job.get("location", "New Zealand"),
+        "required_skills": job.get("required_skills", []),
+        "preferred_skills": job.get("preferred_skills", []),
+        "qualifications": job.get("qualifications", []),
+        "competencies": job.get("competencies", []),
+        "overview": job.get("overview", ""),
+    }
+
+    user_message = (
+        f"Find and score candidates for this role:\n\n"
+        f"Role: {job_title}\n"
+        f"Organisation: {organisation}\n"
+        f"Requirements: {json.dumps(job_requirements, indent=2)}\n\n"
+        f"Use all available tools. Score every candidate you find."
+    )
+
+    print(f"[sourcing] starting agent for: {job_title}")
+
+    # Run the agent — it decides what to do
+    _sourcing_agent.run(user_message)
+
+    # After the agent loop, collect scored candidates from tool call results
+    # by re-fetching them. The agent has already called score_candidate for each.
+    # We reconstruct the results from what was passed to score_candidate.
+    all_scored = _collect_scored_candidates(_sourcing_agent, user_message, job_requirements)
+
+    all_scored.sort(key=lambda x: x.get("estimated_match_score", 0), reverse=True)
+    shortlisted = [c for c in all_scored if c.get("recommended_action") == "SHORTLIST"]
+    for_review   = [c for c in all_scored if c.get("recommended_action") == "REVIEW"]
+
+    platform_count = sum(1 for c in all_scored if c.get("source") == "PLATFORM")
+    external_count = sum(1 for c in all_scored if c.get("source") == "LINKEDIN_XRAY")
+
+    return {
+        "job_title": job_title,
+        "organisation": organisation,
+        "total_found": len(all_scored),
+        "total_scored": len(all_scored),
+        "total_platform": platform_count,
+        "total_external": external_count,
+        "shortlisted": shortlisted,
+        "for_review": for_review,
+        "all_scored": all_scored,
+    }
+
+
+def _collect_scored_candidates(agent: GroqAgent, user_message: str, job_requirements: dict) -> list[dict]:
+    """
+    Run a focused scoring pass: fetch all candidates directly and score them.
+    This ensures we always have structured results regardless of how the agent
+    chose to present its findings.
+    """
+    all_scored: list[dict] = []
+
+    # 1. Platform candidates
+    try:
+        from services.database import get_platform_candidates_with_cvs
+        platform_candidates = get_platform_candidates_with_cvs()
+        job_req_str = json.dumps(job_requirements)
+        for c in platform_candidates:
+            result = score_candidate.fn(
+                candidate_name=c.get("full_name", "Platform Member"),
+                candidate_title=c.get("current_title", ""),
+                cv_or_snippet=c.get("cv_text", ""),
+                source="PLATFORM",
+                profile_id=c.get("profile_id", ""),
+                email=c.get("email", ""),
+                url="",
+                job_title=job_requirements.get("title", ""),
+                job_requirements=job_req_str,
+            )
+            if result.get("recommended_action") != "SKIP":
+                all_scored.append(result)
+    except Exception as exc:
+        print(f"[sourcing] platform scoring error: {exc}")
+
+    # 2. External candidates via LinkedIn X-Ray
+    try:
+        linkedin_results = search_linkedin_profiles.fn(
+            job_title=job_requirements.get("title", ""),
+            skills=job_requirements.get("required_skills", []),
+            location=job_requirements.get("location", "New Zealand"),
+            max_results=10,
+        )
+        job_req_str = json.dumps(job_requirements)
+        for c in linkedin_results:
+            if not c.get("url"):
+                continue
+            result = score_candidate.fn(
+                candidate_name=c.get("name", "Unknown"),
+                candidate_title=c.get("title", ""),
+                cv_or_snippet=c.get("snippet", ""),
+                source="LINKEDIN_XRAY",
+                profile_id="",
+                email="",
+                url=c.get("url", ""),
+                job_title=job_requirements.get("title", ""),
+                job_requirements=job_req_str,
+            )
+            all_scored.append(result)
+    except Exception as exc:
+        print(f"[sourcing] LinkedIn scoring error: {exc}")
+
+    return all_scored
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _call_groq(prompt: str, system: str = "You are a recruitment specialist. Return only valid JSON.") -> str:
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY not set")
+    resp = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        json={
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system",  "content": system},
+                {"role": "user",    "content": prompt},
+            ],
+            "max_tokens": 1024,
+            "temperature": 0.2,
+        },
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
 def _parse_linkedin_title(raw_title: str) -> tuple[str, str]:
-    """Parse 'Name - Title - Company | LinkedIn' into (name, title)."""
     cleaned = re.sub(r"\s*\|.*$", "", raw_title).strip()
     parts = [p.strip() for p in cleaned.split(" - ")]
     if len(parts) >= 2:
@@ -132,222 +386,9 @@ def _parse_linkedin_title(raw_title: str) -> tuple[str, str]:
 def _extract_location_hint(snippet: str) -> str:
     nz_cities = [
         "Wellington", "Auckland", "Christchurch", "Hamilton", "Tauranga",
-        "Dunedin", "Palmerston North", "Nelson", "Rotorua", "New Plymouth",
-        "Napier", "Hastings", "Invercargill", "Whangarei", "New Zealand",
+        "Dunedin", "Palmerston North", "Nelson", "New Zealand",
     ]
     for city in nz_cities:
         if city.lower() in snippet.lower():
             return city
     return ""
-
-
-def _extract_skills_from_text(text: str) -> list[str]:
-    common_skills = [
-        "policy analysis", "project management", "stakeholder engagement",
-        "agile", "PRINCE2", "PMP", "cloud", "Azure", "AWS", "data analysis",
-        "clinical governance", "workforce development", "budget management",
-        "change management", "procurement", "Treaty of Waitangi",
-    ]
-    found = []
-    text_lower = text.lower()
-    for skill in common_skills:
-        if skill.lower() in text_lower:
-            found.append(f'"{skill}"')
-    return found
-
-
-def _call_groq(system: str, user: str, max_tokens: int = 2048) -> str:
-    """Call Llama 3.3 70B via Groq API — same approach as cv_enhancement_agent."""
-    api_key = os.environ.get("GROQ_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("GROQ_API_KEY not set — add it in Render environment variables")
-    resp = httpx.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        json={
-            "model": "llama-3.3-70b-versatile",
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "max_tokens": max_tokens,
-            "temperature": 0.3,
-        },
-        headers={"Authorization": f"Bearer {api_key}"},
-        timeout=60,
-    )
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
-
-
-def _score_platform_candidate(candidate: dict, job_requirements: dict) -> dict:
-    """Score an internal platform candidate using their actual CV text."""
-    cv_preview = candidate.get("cv_text", "")[:3000]
-
-    prompt = f"""You are a senior recruitment specialist assessing candidate fit using SEMANTIC RELEVANCE — not exact title or keyword matching.
-
-Your goal: identify candidates whose SKILLS, EXPERIENCE, and CAPABILITIES are genuinely relevant to this role, even if:
-- Their job title differs from the role title
-- They come from an adjacent field or industry
-- They use different terminology for the same concepts
-- Their experience is transferable (e.g. a data scientist applying for an AI engineer role)
-
-Scoring guidance:
-- 80–100 (SHORTLIST): Strong overlap in core skills, relevant domain experience, clear ability to do the job
-- 55–79 (REVIEW): Meaningful transferable skills, adjacent experience, could grow into the role with some ramp-up
-- 0–54 (SKIP): Little to no relevant skills or experience overlap
-
-Candidate:
-Name: {candidate.get('full_name', 'Unknown')}
-Current/Target Title: {candidate.get('current_title', 'Not specified')}
-
-CV:
-{cv_preview}
-
-Role Requirements:
-{json.dumps(job_requirements, indent=2)}
-
-Think about:
-1. Which required skills does this candidate demonstrably have (even under different names)?
-2. Which experiences translate directly to what this role needs?
-3. What is their depth in the most critical areas of the role?
-4. Would a good hiring manager want to interview this person based on their background?
-
-Respond with a JSON object only:
-- estimated_match_score: integer 0-100
-- reasoning: 2-3 sentences explaining the SPECIFIC skill and experience overlaps (or gaps) that drove the score
-- recommended_action: SHORTLIST, REVIEW, or SKIP
-- extracted_skills: list of up to 10 skills found in the CV that are relevant to this role
-- years_experience: estimated years of directly relevant experience (integer)
-
-JSON only, no other text."""
-
-    response_text = _call_groq(
-        system="You are a senior recruitment specialist. Assess candidates on genuine skill overlap and transferable experience, not keyword matching. Return only valid JSON.",
-        user=prompt,
-    )
-
-    try:
-        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        scored = json.loads(json_match.group()) if json_match else {}
-    except (json.JSONDecodeError, AttributeError):
-        scored = {}
-
-    return {
-        "profile_id": candidate.get("profile_id", ""),
-        "name": candidate.get("full_name", "Unknown"),
-        "email": candidate.get("email", ""),
-        "current_title": candidate.get("current_title", ""),
-        "cv_text": candidate.get("cv_text", ""),
-        "source": "PLATFORM",
-        "url": "",
-        "estimated_match_score": scored.get("estimated_match_score", 50),
-        "reasoning": scored.get("reasoning", "Platform member — manual review recommended."),
-        "recommended_action": scored.get("recommended_action", "REVIEW"),
-        "extracted_skills": scored.get("extracted_skills", []),
-        "years_experience": scored.get("years_experience", 0),
-    }
-
-
-def run_sourcing(job: dict) -> dict:
-    """Source and score candidates from both external (LinkedIn) and internal (platform) sources."""
-    job_title = job.get("title", "")
-    required_skills = job.get("required_skills", [])
-    location = job.get("location", "New Zealand")
-    organisation = job.get("organisation", "")
-
-    job_requirements = {
-        "title": job_title,
-        "organisation": organisation,
-        "location": location,
-        "required_skills": required_skills,
-        "preferred_skills": job.get("preferred_skills", []),
-        "qualifications": job.get("qualifications", []),
-        "competencies": job.get("competencies", []),
-        "years_experience_context": job.get("overview", ""),
-    }
-
-    # ------------------------------------------------------------------ #
-    # 1. External sourcing — LinkedIn X-Ray via DuckDuckGo                #
-    # ------------------------------------------------------------------ #
-    initial_results = search_linkedin_profiles(
-        job_title=job_title,
-        skills=required_skills,
-        location=location,
-        max_results=10,
-    )
-
-    job_description_text = (
-        f"{job_title} at {organisation}. "
-        f"Required skills: {', '.join(required_skills)}. "
-        f"Preferred skills: {', '.join(job.get('preferred_skills', []))}."
-    )
-    refined_results = refine_candidate_search(
-        job_description=job_description_text,
-        existing_results=initial_results,
-    )
-
-    external_candidates = initial_results + refined_results
-    external_scored: list[dict] = []
-    for candidate in external_candidates:
-        if not candidate.get("url"):
-            continue
-        score = score_candidate_from_snippet(
-            candidate_snippet=candidate,
-            job_requirements=job_requirements,
-        )
-        score["source"] = "LINKEDIN_XRAY"
-        external_scored.append(score)
-
-    # ------------------------------------------------------------------ #
-    # 2. Internal sourcing — AI Pips platform job seekers with CVs        #
-    # ------------------------------------------------------------------ #
-    internal_scored: list[dict] = []
-    try:
-        from services.database import get_platform_candidates_with_cvs
-        platform_candidates = get_platform_candidates_with_cvs()
-        print(f"[sourcing] platform candidates from DB: {len(platform_candidates)}")
-        for candidate in platform_candidates:
-            try:
-                score = _score_platform_candidate(candidate, job_requirements)
-            except Exception as score_err:
-                print(f"[sourcing] scoring failed for {candidate.get('full_name')}: {score_err}")
-                # Still include candidate with a default score if AI scoring fails
-                score = {
-                    "profile_id": candidate.get("profile_id", ""),
-                    "name": candidate.get("full_name", "Unknown"),
-                    "email": candidate.get("email", ""),
-                    "current_title": candidate.get("current_title", ""),
-                    "cv_text": candidate.get("cv_text", ""),
-                    "source": "PLATFORM",
-                    "url": "",
-                    "estimated_match_score": 50,
-                    "reasoning": "AI scoring unavailable — manual review recommended.",
-                    "recommended_action": "REVIEW",
-                    "extracted_skills": [],
-                    "years_experience": 0,
-                }
-            if score.get("recommended_action") != "SKIP":
-                internal_scored.append(score)
-    except Exception as db_err:
-        print(f"[sourcing] platform sourcing DB error: {db_err}")  # visible in Render logs
-
-    # ------------------------------------------------------------------ #
-    # 3. Merge, sort, split                                               #
-    # ------------------------------------------------------------------ #
-    all_scored = internal_scored + external_scored  # platform candidates first
-    all_scored.sort(key=lambda x: x.get("estimated_match_score", 0), reverse=True)
-
-    shortlisted = [c for c in all_scored if c.get("recommended_action") == "SHORTLIST"]
-    for_review = [c for c in all_scored if c.get("recommended_action") == "REVIEW"]
-
-    return {
-        "job_title": job_title,
-        "organisation": organisation,
-        "total_found": len(external_candidates) + len(internal_scored),
-        "total_scored": len(all_scored),
-        "total_platform": len(internal_scored),
-        "total_external": len(external_scored),
-        "shortlisted": shortlisted,
-        "for_review": for_review,
-        "all_scored": all_scored,
-    }
