@@ -942,8 +942,13 @@ def delete_job_application(app_id: str) -> None:
 
 @_retryable
 def save_cv_document(doc_dict: dict) -> dict:
-    """Insert a CV document (original or enhanced)."""
+    """Upsert a CV document — deletes any existing record of the same type
+    for this application before inserting, so only one per type is kept."""
     client = get_client()
+    app_id = doc_dict.get("application_id")
+    cv_type = doc_dict.get("type")
+    if app_id and cv_type:
+        client.table("cv_documents").delete().eq("application_id", app_id).eq("type", cv_type).execute()
     response = client.table("cv_documents").insert(doc_dict).execute()
     return response.data[0]
 
