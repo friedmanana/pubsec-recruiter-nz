@@ -47,16 +47,19 @@ def search_linkedin_profiles(
     location: str = "New Zealand",
     max_results: int = 10,
 ) -> list[dict]:
-    skills = skills or []
-    skills_query = " ".join(f'"{s}"' for s in skills[:4])
-    query = f'site:linkedin.com/in/ "{job_title}" "{location}" {skills_query}'
+    # Use nz.linkedin.com subdomain — only profiles where the person has
+    # their location set to New Zealand appear on this subdomain.
+    # Skills are NOT included in the query: they're rarely in the short
+    # snippet DDG returns, so they only reduce recall without improving
+    # precision. The scoring step filters by relevance instead.
+    query = f'site:nz.linkedin.com/in/ "{job_title}"'
     results = []
     try:
         with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=max_results + 5):  # fetch extra to allow for ad filtering
+            for r in ddgs.text(query, max_results=max_results + 5):
                 url = r.get("href", "")
-                # Skip ads and non-LinkedIn URLs
-                if "linkedin.com/in/" not in url:
+                # Only keep nz.linkedin.com profile URLs (skip ads/other pages)
+                if "nz.linkedin.com/in/" not in url:
                     continue
                 name, title = _parse_linkedin_title(r.get("title", ""))
                 if not name:
@@ -155,14 +158,26 @@ def score_candidate(
     email: str = "",
     url: str = "",
 ) -> dict:
+    is_snippet = source == "LINKEDIN_XRAY"
+    data_label = "LinkedIn snippet (limited preview — ~150 chars only)" if is_snippet else "CV text"
+    snippet_note = (
+        "\nNOTE: This is a brief LinkedIn preview snippet, not a full CV. "
+        "Score based only on what is explicitly stated. "
+        "If the title and snippet clearly match the role → REVIEW or SHORTLIST. "
+        "If the title/snippet clearly does NOT match → SKIP. "
+        "Do NOT penalise for missing information — the snippet is too short to be complete."
+        if is_snippet else ""
+    )
+
     prompt = f"""Score this candidate against the job requirements using SEMANTIC RELEVANCE.
 Consider transferable skills and adjacent experience — not just exact title/keyword matching.
+{snippet_note}
 
 Candidate: {candidate_name}
 Title: {candidate_title or 'Not specified'}
 Source: {source}
 
-CV / Profile:
+{data_label}:
 {cv_or_snippet[:3000]}
 
 Job: {job_title}
@@ -170,8 +185,8 @@ Requirements: {job_requirements[:1500]}
 
 Scoring guide:
 - 80-100 → SHORTLIST: Strong skill overlap, clearly can do the job
-- 55-79  → REVIEW: Meaningful transferable skills, adjacent experience
-- 0-54   → SKIP: Little relevant overlap
+- 55-79  → REVIEW: Title or snippet suggests relevant background — worth investigating
+- 0-54   → SKIP: Title/snippet clearly unrelated to the role
 
 Return JSON only:
 {{
