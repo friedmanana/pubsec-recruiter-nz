@@ -88,14 +88,14 @@ function JobDetailPage() {
     setSourcingStatus(null)
     try {
       setSourcingStatus('searching')
-      const sourced = await api.sourceAndScreen(id) as { total_screened?: number; total_platform?: number; total_external?: number; total_scored?: number }
+      const sourced = await api.sourceAndScreen(id) as { total_screened?: number; total_platform?: number; total_external?: number; total_scored?: number; total_found?: number }
       await loadData()
       const platform = sourced?.total_platform ?? 0
-      const screened = sourced?.total_screened ?? sourced?.total_scored ?? 0
-      const found = platform + screened
+      const external = sourced?.total_external ?? 0
+      const found = platform + external
       const parts: string[] = []
       if (platform > 0) parts.push(`${platform} from AI Pips`)
-      if (screened > 0) parts.push(`${screened - platform > 0 ? screened - platform : screened} external`)
+      if (external > 0) parts.push(`${external} external`)
       setSourcingStatus(found > 0 ? `Found ${found} candidate${found !== 1 ? 's' : ''}${parts.length ? ` (${parts.join(', ')})` : ''}` : 'no_results')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))

@@ -259,8 +259,14 @@ def _collect_scored_candidates(job_requirements: dict) -> list[dict]:
         platform_candidates = get_platform_candidates_with_cvs()
         job_req_str = json.dumps(job_requirements)
         for c in platform_candidates:
+            # full_name may be empty if the profile wasn't completed —
+            # fall back to the first line of the CV text (e.g. "Aroha Tane")
+            full_name = (c.get("full_name") or "").strip()
+            if not full_name and c.get("cv_text"):
+                full_name = c["cv_text"].strip().split("\n")[0].strip()
+            candidate_name = full_name or "Platform Member"
             result = score_candidate.fn(
-                candidate_name=c.get("full_name", "Platform Member"),
+                candidate_name=candidate_name,
                 candidate_title=c.get("current_title", ""),
                 cv_or_snippet=c.get("cv_text", ""),
                 source="PLATFORM",
