@@ -235,7 +235,9 @@ def source_candidates(job_id: str) -> SourcingResponse:
                     "interview_flags": [],
                 })
         except Exception as exc:
-            print(f"[source] failed to save candidate {candidate.get('name')}: {exc}")
+            import traceback
+            print(f"[source] failed to save candidate {candidate.get('name')}: {type(exc).__name__}: {exc}")
+            traceback.print_exc()
 
     return SourcingResponse(**result)
 
