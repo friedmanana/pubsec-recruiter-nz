@@ -864,36 +864,43 @@ def get_platform_candidates_with_cvs() -> list[dict]:
     if missing_profiles:
         print(f"[db] WARNING: {len(missing_profiles)} profile_ids have no matching candidate_profile: {missing_profiles[:5]}")
 
-    # 4. For each profile pick the best CV (ENHANCED beats ORIGINAL; already ordered by created_at desc)
-    best: dict[str, dict] = {}
+    # 4. For each APPLICATION pick the best CV (ENHANCED beats ORIGINAL).
+    # We group by application_id (not profile_id) so the same person with
+    # multiple tailored CVs (e.g. one for AI Engineer, one for Data Scientist)
+    # shows up separately for each role — giving the recruiter full coverage.
+    best_per_app: dict[str, dict] = {}
     for cv_row in cv_resp_data:
-        app = app_map.get(cv_row["application_id"])
+        app_id = cv_row["application_id"]
+        app = app_map.get(app_id)
         if not app:
             continue
         pid = app.get("candidate_profile_id")
         if not pid:
             continue
-        existing = best.get(pid)
+        existing = best_per_app.get(app_id)
         if existing is None:
-            best[pid] = {
+            best_per_app[app_id] = {
+                "profile_id": pid,
                 "cv_text": cv_row["content_text"],
                 "cv_type": cv_row["type"],
                 "job_title": app.get("job_title", ""),
             }
         elif existing["cv_type"] != "ENHANCED" and cv_row["type"] == "ENHANCED":
-            best[pid] = {
+            best_per_app[app_id] = {
+                "profile_id": pid,
                 "cv_text": cv_row["content_text"],
                 "cv_type": cv_row["type"],
                 "job_title": app.get("job_title", ""),
             }
 
-    print(f"[db] unique profiles with best CV selected: {len(best)}")
+    print(f"[db] unique applications with best CV selected: {len(best_per_app)}")
 
-    # 5. Build result list
+    # 5. Build result list — one entry per application.
     # Return the raw full_name (may be empty string) so the sourcing agent
     # can fall back to extracting the name from CV text.
     results: list[dict] = []
-    for pid, cv_data in best.items():
+    for app_id, cv_data in best_per_app.items():
+        pid = cv_data["profile_id"]
         profile = profile_map.get(pid)
         if not profile or not cv_data.get("cv_text", "").strip():
             continue
