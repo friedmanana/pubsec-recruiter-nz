@@ -195,6 +195,9 @@ def source_candidates(job_id: str) -> SourcingResponse:
     for candidate in result.get("all_scored", []):
         try:
             source = candidate.get("source", "LINKEDIN_XRAY")
+            # DB check constraint only allows DIRECT_APPLY and LINKEDIN_XRAY.
+            # Platform candidates are distinguished by candidate_profile_id != null.
+            db_source = "LINKEDIN_XRAY" if source == "LINKEDIN_XRAY" else "DIRECT_APPLY"
             candidate_dict = {
                 "full_name": candidate.get("name", "Unknown"),
                 "email": candidate.get("email") or None,
@@ -207,7 +210,7 @@ def source_candidates(job_id: str) -> SourcingResponse:
                 "summary": candidate.get("reasoning", candidate.get("snippet", "")),
                 "linkedin_url": candidate.get("url", "") or None,
                 "raw_cv_text": candidate.get("cv_text") or None,
-                "source": source,
+                "source": db_source,
             }
             if source == "PLATFORM" and candidate.get("profile_id"):
                 candidate_dict["candidate_profile_id"] = candidate["profile_id"]

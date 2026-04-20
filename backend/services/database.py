@@ -361,9 +361,10 @@ def save_candidate(candidate_dict: dict) -> dict:
             .execute()
         )
         if existing.data:
-            # Update and return existing record
+            # Update and return existing record (skip candidate_profile_id to avoid conflicts)
             record_id = existing.data[0]["id"]
-            update_dict = {k: v for k, v in candidate_dict.items() if k != "candidate_profile_id"}
+            skip = {"candidate_profile_id", "source"}  # source has a check constraint
+            update_dict = {k: v for k, v in candidate_dict.items() if k not in skip}
             client.table("candidates").update(update_dict).eq("id", record_id).execute()
             return {"id": record_id, **candidate_dict}
 
