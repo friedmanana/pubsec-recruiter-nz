@@ -189,7 +189,9 @@ def source_candidates(job_id: str) -> SourcingResponse:
         traceback.print_exc()
         raise HTTPException(status_code=503, detail=f"Sourcing failed: {exc}") from exc
 
-    # Persist each sourced candidate — log errors but don't crash the response
+    # Persist each sourced candidate and immediately create a screening_result
+    # so getAllResults can find them without a separate /screen step.
+    _rec_map = {"SHORTLIST": "SHORTLIST", "REVIEW": "HOLD", "SKIP": "DECLINE"}
     for candidate in result.get("all_scored", []):
         try:
             source = candidate.get("source", "LINKEDIN_XRAY")
@@ -209,7 +211,29 @@ def source_candidates(job_id: str) -> SourcingResponse:
             }
             if source == "PLATFORM" and candidate.get("profile_id"):
                 candidate_dict["candidate_profile_id"] = candidate["profile_id"]
-            db.save_candidate(candidate_dict)
+            saved = db.save_candidate(candidate_dict)
+            candidate_id = saved.get("id") if saved else None
+
+            # Link candidate to this job via screening_result
+            if candidate_id:
+                score = int(candidate.get("estimated_match_score") or 50)
+                recommendation = _rec_map.get(
+                    candidate.get("recommended_action", "REVIEW"), "HOLD"
+                )
+                db.save_screening_result({
+                    "job_id": job_id,
+                    "candidate_id": candidate_id,
+                    "overall_score": score,
+                    "skill_match_score": score,
+                    "experience_score": score,
+                    "qualification_score": score,
+                    "nz_fit_score": score,
+                    "recommendation": recommendation,
+                    "recommendation_reason": candidate.get("reasoning", ""),
+                    "strengths": [],
+                    "concerns": [],
+                    "interview_flags": [],
+                })
         except Exception as exc:
             print(f"[source] failed to save candidate {candidate.get('name')}: {exc}")
 
