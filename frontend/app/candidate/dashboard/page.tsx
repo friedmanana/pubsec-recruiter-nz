@@ -12,38 +12,97 @@ const STATUS_CONFIG = {
   COMPLETE:    { label: 'Complete',    color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
 }
 
-const CvIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <path d="M9 13h6M9 17h4"/>
-    <path d="M16.5 13.5l1 1-1 1" strokeWidth={1.5}/>
-    <circle cx="18" cy="14.5" r="0" fill="currentColor"/>
-    <path d="M15 12.5c.8-.5 2-.3 2.5.5s.3 2-.5 2.5" strokeWidth={1.4}/>
+// "Sparky" — CV pip character, excited with sparkles
+const CvPip = () => (
+  <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9">
+    {/* Sparkles */}
+    <path d="M33 8l.6 1.8 1.8.6-1.8.6L33 12.8l-.6-1.8-1.8-.6 1.8-.6z" fill="currentColor" opacity="0.55"/>
+    <circle cx="6" cy="13" r="1.1" fill="currentColor" opacity="0.4"/>
+    <circle cx="35" cy="24" r="0.8" fill="currentColor" opacity="0.35"/>
+    {/* Antenna */}
+    <line x1="20" y1="5" x2="20" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="20" cy="3.5" r="2.2" fill="currentColor"/>
+    {/* Head */}
+    <rect x="8" y="9" width="24" height="19" rx="7" fill="currentColor"/>
+    {/* Eyes — wide excited squares */}
+    <rect x="12" y="13.5" width="6" height="6" rx="2" fill="white"/>
+    <rect x="22" y="13.5" width="6" height="6" rx="2" fill="white"/>
+    <circle cx="15" cy="16.5" r="2.1" fill="currentColor"/>
+    <circle cx="25" cy="16.5" r="2.1" fill="currentColor"/>
+    {/* Gleam dots */}
+    <circle cx="15.9" cy="15.4" r="0.7" fill="white"/>
+    <circle cx="25.9" cy="15.4" r="0.7" fill="white"/>
+    {/* Big grin */}
+    <path d="M14 24 Q20 29 26 24" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+    {/* Body with CV lines */}
+    <rect x="12" y="28" width="16" height="9" rx="4" fill="currentColor" opacity="0.72"/>
+    <line x1="15" y1="31" x2="25" y2="31" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.75"/>
+    <line x1="15" y1="34" x2="22" y2="34" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.75"/>
   </svg>
 )
 
-const LetterIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2"/>
-    <path d="M2 7l10 7 10-7"/>
+// "Penny" — Cover letter pip, playful wink, envelope body
+const LetterPip = () => (
+  <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9">
+    {/* Heart accent */}
+    <path d="M33 9 Q34.2 7.2 36 9 Q37.8 10.8 36 13 Q34.5 14.5 33 13 Q31.2 10.8 33 9z" fill="currentColor" opacity="0.5"/>
+    {/* Antenna — little curl */}
+    <path d="M20 9 C22 6 24 5 22 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+    <circle cx="21.5" cy="2.5" r="2" fill="currentColor"/>
+    {/* Head */}
+    <rect x="8" y="9" width="24" height="19" rx="7" fill="currentColor"/>
+    {/* Eyes — one normal, one wink */}
+    <rect x="12" y="13.5" width="6" height="6" rx="2" fill="white"/>
+    <circle cx="15" cy="16.5" r="2" fill="currentColor"/>
+    <circle cx="15.8" cy="15.6" r="0.6" fill="white"/>
+    {/* Wink eye */}
+    <path d="M22 17 Q25 13.5 28 17" stroke="white" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+    {/* Smile */}
+    <path d="M14 24 Q20 28 26 24" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+    {/* Body as envelope */}
+    <rect x="10" y="28" width="20" height="10" rx="3.5" fill="currentColor" opacity="0.72"/>
+    {/* Envelope flap */}
+    <path d="M10 28 L20 35 L30 28" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.8"/>
   </svg>
 )
 
-const InterviewIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-    <path d="M8 10h8M8 14h5"/>
+// "Echo" — Interview pip, confident, microphone chest
+const InterviewPip = () => (
+  <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9">
+    {/* Stars */}
+    <path d="M33 7l.5 1.6 1.6.5-1.6.5-.5 1.6-.5-1.6-1.6-.5 1.6-.5z" fill="currentColor" opacity="0.6"/>
+    <path d="M6 17l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z" fill="currentColor" opacity="0.35"/>
+    {/* Antenna + star tip */}
+    <line x1="20" y1="5" x2="20" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M20 1.5l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z" fill="currentColor"/>
+    {/* Head */}
+    <rect x="8" y="9" width="24" height="19" rx="7" fill="currentColor"/>
+    {/* Eyes — cool confident narrow */}
+    <rect x="12" y="14" width="6" height="4.5" rx="2" fill="white"/>
+    <rect x="22" y="14" width="6" height="4.5" rx="2" fill="white"/>
+    <rect x="13.2" y="15" width="3.6" height="2.5" rx="1.2" fill="currentColor"/>
+    <rect x="23.2" y="15" width="3.6" height="2.5" rx="1.2" fill="currentColor"/>
+    {/* Gleam */}
+    <circle cx="14.2" cy="15.4" r="0.6" fill="white"/>
+    <circle cx="24.2" cy="15.4" r="0.6" fill="white"/>
+    {/* Confident straight mouth */}
+    <path d="M15 23.5 Q20 26.5 25 23.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+    {/* Body */}
+    <rect x="12" y="28" width="16" height="9" rx="4" fill="currentColor" opacity="0.72"/>
+    {/* Mic on chest */}
+    <rect x="18" y="29.5" width="4" height="5" rx="2" stroke="white" strokeWidth="1.3" fill="none" opacity="0.85"/>
+    <path d="M17 35.5 Q20 37.5 23 35.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" fill="none" opacity="0.75"/>
+    <line x1="20" y1="34.5" x2="20" y2="35.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" opacity="0.75"/>
   </svg>
 )
 
 const TOOLS = [
   {
     phase: 1,
-    Icon: CvIcon,
+    Icon: CvPip,
     label: 'CV Enhancement',
     description: 'Paste your CV and job description — AI rewrites it to match the role and pass ATS filters.',
-    bg: 'bg-violet-50',
+    bg: 'bg-violet-100',
     iconColor: 'text-violet-600',
     border: 'border-violet-200',
     text: 'text-violet-700',
@@ -51,10 +110,10 @@ const TOOLS = [
   },
   {
     phase: 2,
-    Icon: LetterIcon,
+    Icon: LetterPip,
     label: 'Cover Letter',
     description: 'Generate a tailored cover letter that speaks to the role, or enhance one you already have.',
-    bg: 'bg-indigo-50',
+    bg: 'bg-indigo-100',
     iconColor: 'text-indigo-600',
     border: 'border-indigo-200',
     text: 'text-indigo-700',
@@ -62,10 +121,10 @@ const TOOLS = [
   },
   {
     phase: 3,
-    Icon: InterviewIcon,
+    Icon: InterviewPip,
     label: 'Interview Prep',
     description: 'Get a personalised Q&A bank — behavioural, technical, and motivation questions with model answers.',
-    bg: 'bg-sky-50',
+    bg: 'bg-sky-100',
     iconColor: 'text-sky-600',
     border: 'border-sky-200',
     text: 'text-sky-700',
@@ -121,7 +180,7 @@ export default function CandidateDashboard() {
               key={tool.phase}
               className={`relative bg-white rounded-2xl border ${tool.border} p-6 flex flex-col hover:shadow-md transition-all`}
             >
-              <div className={`w-12 h-12 rounded-xl ${tool.bg} ${tool.iconColor} flex items-center justify-center mb-4`}>
+              <div className={`w-14 h-14 rounded-2xl ${tool.bg} ${tool.iconColor} flex items-center justify-center mb-4`}>
                 <tool.Icon />
               </div>
               <h2 className={`text-base font-bold ${tool.text} mb-1`}>{tool.label}</h2>
