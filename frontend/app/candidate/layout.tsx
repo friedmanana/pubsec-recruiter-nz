@@ -34,12 +34,9 @@ export default function CandidateLayout({ children }: { children: React.ReactNod
       <nav className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-1.5 text-lg font-black tracking-tight">
+            <Link href="/candidate/dashboard" className="flex items-center gap-1.5 text-lg font-black tracking-tight">
               <span className="text-indigo-600">AI</span><span className="text-slate-800">Pips</span>
               <span className="text-xs font-semibold text-slate-400 border border-slate-200 rounded-full px-2 py-0.5 ml-1">Job Seeker</span>
-            </Link>
-            <Link href="/candidate/dashboard" className="text-base text-slate-600 hover:text-slate-900 font-medium">
-              My Applications
             </Link>
           </div>
           <div className="flex items-center gap-5">
