@@ -52,7 +52,6 @@ export default function CandidateDashboard() {
   const router = useRouter()
   const [applications, setApplications] = useState<JobApplication[]>([])
   const [loading, setLoading] = useState(true)
-  const [starting, setStarting] = useState<number | null>(null)
 
   useEffect(() => {
     candidateApi.listApplications()
@@ -61,15 +60,8 @@ export default function CandidateDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleStart = async (phase: number) => {
-    setStarting(phase)
-    try {
-      const app = await candidateApi.createApplication({ job_title: '', company: '', job_description_text: '' })
-      router.push(`/candidate/applications/${app.id}?phase=${phase}`)
-    } catch (err) {
-      console.error(err)
-      setStarting(null)
-    }
+  const handleStart = (phase: number) => {
+    router.push(`/candidate/applications/new?phase=${phase}`)
   }
 
   const handleDelete = async (id: string) => {
@@ -97,12 +89,9 @@ export default function CandidateDashboard() {
               <p className="text-sm text-slate-500 flex-1 mb-5 leading-relaxed">{tool.description}</p>
               <button
                 onClick={() => handleStart(tool.phase)}
-                disabled={starting !== null}
-                className={`w-full py-2.5 text-sm font-semibold text-white rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${tool.btn}`}
+                className={`w-full py-2.5 text-sm font-semibold text-white rounded-xl transition-colors flex items-center justify-center gap-2 ${tool.btn}`}
               >
-                {starting === tool.phase ? (
-                  <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Opening…</>
-                ) : 'Start →'}
+                Start →
               </button>
             </div>
           ))}
