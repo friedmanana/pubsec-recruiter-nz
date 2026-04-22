@@ -106,6 +106,8 @@ function ApplicationWorkspace() {
   const [savingCv, setSavingCv] = useState(false)
   const [parsingPdf, setParsingPdf] = useState(false)
   const pdfInputRef = useRef<HTMLInputElement>(null)
+  const clPdfInputRef = useRef<HTMLInputElement>(null)
+  const [parsingClPdf, setParsingClPdf] = useState(false)
   const [enhancing, setEnhancing] = useState(false)
   const [generatingCl, setGeneratingCl] = useState(false)
   const [savingJob, setSavingJob] = useState(false)
@@ -175,6 +177,21 @@ function ApplicationWorkspace() {
     finally {
       setParsingPdf(false)
       if (pdfInputRef.current) pdfInputRef.current.value = ''
+    }
+  }
+
+  const handleClPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setParsingClPdf(true); setError(null)
+    try {
+      const { text } = await candidateApi.parseCvPdf(id, file)
+      setOwnLetterInput(text)
+      flash('Cover letter extracted from PDF — review and enhance')
+    } catch (err) { setError(String(err)) }
+    finally {
+      setParsingClPdf(false)
+      if (clPdfInputRef.current) clPdfInputRef.current.value = ''
     }
   }
 
@@ -693,7 +710,20 @@ function ApplicationWorkspace() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Your existing cover letter</label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <label className="block text-sm font-semibold text-slate-700">Your existing cover letter</label>
+                    <input ref={clPdfInputRef} type="file" accept=".pdf" className="hidden" onChange={handleClPdfUpload} />
+                    <button
+                      onClick={() => clPdfInputRef.current?.click()}
+                      disabled={parsingClPdf}
+                      className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+                    >
+                      {parsingClPdf
+                        ? <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Reading PDF…</>
+                        : <>↑ Upload PDF</>
+                      }
+                    </button>
+                  </div>
                   <textarea
                     value={ownLetterInput}
                     onChange={e => setOwnLetterInput(e.target.value)}
