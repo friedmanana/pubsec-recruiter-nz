@@ -1,7 +1,7 @@
 """Candidate portal API routes."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from agents.cv_enhancement_agent import (
@@ -134,6 +134,28 @@ def delete_application(app_id: str, user: dict = Depends(get_current_user)) -> d
     _verify_ownership(app_id, user["user_id"])
     db.delete_job_application(app_id)
     return {"deleted": True}
+
+
+@router.post("/applications/{app_id}/parse-cv-pdf")
+async def parse_cv_pdf(app_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)) -> dict:
+    """Parse a PDF CV upload and return extracted plain text."""
+    _verify_ownership(app_id, user["user_id"])
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=422, detail="Only PDF files are supported.")
+    try:
+        from io import BytesIO
+        from pypdf import PdfReader
+        content = await file.read()
+        reader = PdfReader(BytesIO(content))
+        pages_text = [page.extract_text() or "" for page in reader.pages]
+        text = "\n\n".join(p.strip() for p in pages_text if p.strip())
+        if not text.strip():
+            raise HTTPException(status_code=422, detail="Could not extract text from this PDF. Try copying and pasting instead.")
+        return {"text": text.strip()}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PDF parsing failed: {exc}") from exc
 
 
 @router.post("/applications/{app_id}/cv")

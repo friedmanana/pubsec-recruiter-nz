@@ -56,6 +56,21 @@ export const candidateApi = {
       method: 'POST', body: JSON.stringify({ content_text }),
     }),
 
+  parseCvPdf: async (id: string, file: File): Promise<{ text: string }> => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE}/api/v1/candidate/applications/${id}/parse-cv-pdf`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    })
+    if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
+    return res.json()
+  },
+
   generateCv: (id: string, background_text: string, pages: string, style: string) =>
     fetchCandidate<CvDocument>(`/api/v1/candidate/applications/${id}/generate-cv`, {
       method: 'POST', body: JSON.stringify({ background_text, pages, style }),

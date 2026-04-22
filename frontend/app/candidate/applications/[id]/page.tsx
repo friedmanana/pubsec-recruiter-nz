@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { candidateApi } from '@/lib/candidateApi'
@@ -104,6 +104,8 @@ function ApplicationWorkspace() {
   const [prepLoaded, setPrepLoaded] = useState(false)
 
   const [savingCv, setSavingCv] = useState(false)
+  const [parsingPdf, setParsingPdf] = useState(false)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
   const [enhancing, setEnhancing] = useState(false)
   const [generatingCl, setGeneratingCl] = useState(false)
   const [savingJob, setSavingJob] = useState(false)
@@ -159,6 +161,21 @@ function ApplicationWorkspace() {
       setOriginalCv(saved); flash('CV saved')
     } catch (e) { setError(String(e)) }
     finally { setSavingCv(false) }
+  }
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setParsingPdf(true); setError(null)
+    try {
+      const { text } = await candidateApi.parseCvPdf(id, file)
+      setCvInput(text)
+      flash('CV extracted from PDF — review and save')
+    } catch (err) { setError(String(err)) }
+    finally {
+      setParsingPdf(false)
+      if (pdfInputRef.current) pdfInputRef.current.value = ''
+    }
   }
 
   const handleGenerateCvFromScratch = async () => {
@@ -261,6 +278,32 @@ function ApplicationWorkspace() {
   const handleCopy = async (text: string, key: 'cv' | 'cl') => {
     await navigator.clipboard.writeText(text)
     setCopied(key); setTimeout(() => setCopied(null), 2000)
+  }
+
+  const handleDownloadPdf = (html: string, filename: string) => {
+    const win = window.open('', '_blank')
+    if (!win) return
+    const name = app?.job_title ? `${filename} — ${app.job_title}${app.company ? ` at ${app.company}` : ''}` : filename
+    win.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8"/>
+      <title>${name}</title>
+      <style>
+        @page { margin: 18mm 20mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Georgia, 'Times New Roman', serif; font-size: 11pt; line-height: 1.55; color: #1a1a1a; margin: 0; padding: 0; }
+        h1 { font-size: 20pt; margin: 0 0 2px; }
+        h2 { font-size: 13pt; margin: 18px 0 4px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+        h3 { font-size: 11pt; margin: 10px 0 2px; }
+        p  { margin: 0 0 8px; }
+        ul { margin: 4px 0 8px 18px; padding: 0; }
+        li { margin-bottom: 3px; }
+        strong, b { font-weight: 700; }
+        .no-print { display: none !important; }
+      </style>
+    </head><body>${html}</body></html>`)
+    win.document.close()
+    win.focus()
+    setTimeout(() => { win.print(); win.close() }, 400)
   }
 
   if (loading) {
@@ -383,7 +426,20 @@ function ApplicationWorkspace() {
               {cvMode === 'enhance' ? (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-semibold text-slate-700">Paste your existing CV</label>
+                    <div className="flex items-center gap-3">
+                      <label className="block text-sm font-semibold text-slate-700">Paste your existing CV</label>
+                      <input ref={pdfInputRef} type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} />
+                      <button
+                        onClick={() => pdfInputRef.current?.click()}
+                        disabled={parsingPdf}
+                        className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+                      >
+                        {parsingPdf
+                          ? <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Reading PDF…</>
+                          : <>↑ Upload PDF</>
+                        }
+                      </button>
+                    </div>
                     {cvInput.trim() && (
                       <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">{cvInput.split(/\s+/).filter(Boolean).length} words</span>
                     )}
@@ -528,12 +584,23 @@ function ApplicationWorkspace() {
                   </p>
                 </div>
                 {enhancedCv && (
-                  <button
-                    onClick={() => handleCopy(enhancedCv.content_text, 'cv')}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
-                  >
-                    {copied === 'cv' ? '✓ Copied!' : 'Copy text'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadPdf(enhancedCv.content_html, 'Enhanced CV')}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download PDF
+                    </button>
+                    <button
+                      onClick={() => handleCopy(enhancedCv.content_text, 'cv')}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
+                    >
+                      {copied === 'cv' ? '✓ Copied!' : 'Copy text'}
+                    </button>
+                  </div>
                 )}
               </div>
               {enhancedCv ? (
@@ -664,12 +731,23 @@ function ApplicationWorkspace() {
                   </p>
                 </div>
                 {coverLetter && (
-                  <button
-                    onClick={() => handleCopy(clEditText, 'cl')}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-colors"
-                  >
-                    {copied === 'cl' ? '✓ Copied!' : 'Copy'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadPdf(coverLetter.content_html, 'Cover Letter')}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download PDF
+                    </button>
+                    <button
+                      onClick={() => handleCopy(clEditText, 'cl')}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl transition-colors"
+                    >
+                      {copied === 'cl' ? '✓ Copied!' : 'Copy'}
+                    </button>
+                  </div>
                 )}
               </div>
 
