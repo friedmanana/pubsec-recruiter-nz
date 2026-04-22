@@ -280,31 +280,16 @@ function ApplicationWorkspace() {
     setCopied(key); setTimeout(() => setCopied(null), 2000)
   }
 
-  const handleDownloadPdf = async (html: string, filename: string) => {
+  const handleDownloadPdf = async (type: 'cv' | 'cover_letter', label: string) => {
     const suffix = app?.job_title
       ? `_${app.job_title}${app.company ? `_${app.company}` : ''}`.replace(/[^a-zA-Z0-9_-]/g, '_')
       : ''
-    const outputName = `${filename.replace(' ', '_')}${suffix}.pdf`
-
-    const container = document.createElement('div')
-    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;padding:40px 48px;font-family:Georgia,serif;font-size:11pt;line-height:1.55;color:#1a1a1a;'
-    container.innerHTML = html
-    document.body.appendChild(container)
-
-    // dynamic import — html2pdf.js is browser-only
-    const html2pdf = (await import('html2pdf.js')).default
-    await html2pdf()
-      .set({
-        margin: [12, 14, 12, 14],
-        filename: outputName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      })
-      .from(container)
-      .save()
-
-    document.body.removeChild(container)
+    const filename = `${label.replace(' ', '_')}${suffix}.pdf`
+    try {
+      await candidateApi.downloadPdf(id, type, filename)
+    } catch (e) {
+      setError(String(e))
+    }
   }
 
   if (loading) {
@@ -587,7 +572,7 @@ function ApplicationWorkspace() {
                 {enhancedCv && (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleDownloadPdf(enhancedCv.content_html, 'Enhanced CV')}
+                      onClick={() => handleDownloadPdf('cv', 'Enhanced_CV')}
                       className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -734,7 +719,7 @@ function ApplicationWorkspace() {
                 {coverLetter && (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleDownloadPdf(coverLetter.content_html, 'Cover Letter')}
+                      onClick={() => handleDownloadPdf('cover_letter', 'Cover_Letter')}
                       className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

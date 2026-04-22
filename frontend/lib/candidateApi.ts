@@ -113,4 +113,21 @@ export const candidateApi = {
     fetchCandidate(`/api/v1/candidate/applications/${id}/interview-prep`, {
       method: 'POST', body: JSON.stringify({ generated_qa: qa }),
     }),
+
+  downloadPdf: async (id: string, type: 'cv' | 'cover_letter', filename: string) => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const res = await fetch(`${BASE}/api/v1/candidate/applications/${id}/download-pdf?type=${type}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error(`PDF generation failed: ${await res.text()}`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  },
 }

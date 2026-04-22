@@ -1,7 +1,8 @@
 """Candidate portal API routes."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from agents.cv_enhancement_agent import (
@@ -310,6 +311,131 @@ def generate_interview_qa_endpoint(app_id: str, body: GenerateInterviewQARequest
 
     db.upsert_interview_prep(app_id, {"generated_qa": qa})
     return {"qa": qa}
+
+
+@router.get("/applications/{app_id}/download-pdf")
+def download_pdf(
+    app_id: str,
+    type: str = Query(..., description="cv or cover_letter"),
+    user: dict = Depends(get_current_user),
+):
+    """Generate and stream a formatted PDF for the enhanced CV or cover letter."""
+    app = _verify_ownership(app_id, user["user_id"])
+
+    if type == "cv":
+        doc = db.get_latest_cv(app_id, "ENHANCED") or db.get_latest_cv(app_id, "ORIGINAL")
+        if not doc:
+            raise HTTPException(status_code=404, detail="No CV found.")
+        text = doc["content_text"]
+        label = "CV"
+    elif type == "cover_letter":
+        doc = db.get_cover_letter(app_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="No cover letter found.")
+        text = doc["content_text"]
+        label = "Cover Letter"
+    else:
+        raise HTTPException(status_code=400, detail="type must be 'cv' or 'cover_letter'")
+
+    job_title = app.get("job_title", "")
+    company = app.get("company", "")
+    slug = f"_{job_title}{'_' + company if company else ''}".replace(" ", "_")[:60] if job_title else ""
+    filename = f"{label.replace(' ', '_')}{slug}.pdf"
+
+    pdf_bytes = _build_pdf(text, label, job_title, company)
+
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _build_pdf(text: str, label: str, job_title: str, company: str) -> bytes:
+    """Render plain text as a clean A4 PDF using reportlab."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.enums import TA_LEFT
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=20 * mm, rightMargin=20 * mm,
+        topMargin=18 * mm, bottomMargin=18 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+    normal = ParagraphStyle(
+        "cv_normal", parent=styles["Normal"],
+        fontName="Helvetica", fontSize=10, leading=14,
+        spaceAfter=2,
+    )
+    heading = ParagraphStyle(
+        "cv_heading", parent=styles["Normal"],
+        fontName="Helvetica-Bold", fontSize=11, leading=14,
+        spaceBefore=10, spaceAfter=3, textColor=(0.1, 0.1, 0.5),
+    )
+    name_style = ParagraphStyle(
+        "cv_name", parent=styles["Normal"],
+        fontName="Helvetica-Bold", fontSize=18, leading=22, spaceAfter=2,
+    )
+    sub_style = ParagraphStyle(
+        "cv_sub", parent=styles["Normal"],
+        fontName="Helvetica", fontSize=9, leading=12, textColor=(0.4, 0.4, 0.4), spaceAfter=6,
+    )
+
+    # Detect section headings: ALL CAPS lines with 2+ words or known keywords
+    SECTION_KEYWORDS = {
+        "EXPERIENCE", "EDUCATION", "SKILLS", "SUMMARY", "PROFILE",
+        "ACHIEVEMENTS", "CERTIFICATIONS", "PROJECTS", "REFERENCES",
+        "PROFESSIONAL", "EMPLOYMENT", "QUALIFICATIONS", "COVER LETTER",
+        "INTRODUCTION", "OBJECTIVE", "AWARDS", "VOLUNTEERING",
+    }
+
+    def is_section_heading(line: str) -> bool:
+        stripped = line.strip()
+        if not stripped:
+            return False
+        if stripped == stripped.upper() and len(stripped) > 3:
+            return any(kw in stripped for kw in SECTION_KEYWORDS) or (stripped.replace(" ", "").isalpha() and len(stripped.split()) >= 2)
+        return False
+
+    lines = text.splitlines()
+    story = []
+    first_non_empty = next((i for i, l in enumerate(lines) if l.strip()), None)
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            story.append(Spacer(1, 3 * mm))
+            continue
+
+        # First non-empty line → name (for CV) or title (for cover letter)
+        if i == first_non_empty and label == "CV":
+            story.append(Paragraph(stripped, name_style))
+            continue
+
+        if is_section_heading(stripped):
+            story.append(Paragraph(stripped, heading))
+            continue
+
+        # Bullet lines
+        if stripped.startswith(("•", "-", "–", "*")):
+            bullet_text = stripped.lstrip("•-–* ").strip()
+            p = ParagraphStyle(
+                "cv_bullet", parent=normal,
+                leftIndent=8 * mm, firstLineIndent=-4 * mm, spaceAfter=1,
+            )
+            story.append(Paragraph(f"• {bullet_text}", p))
+            continue
+
+        story.append(Paragraph(stripped, normal))
+
+    doc.build(story)
+    return buf.getvalue()
 
 
 def _verify_ownership(app_id: str, user_id: str) -> dict:
