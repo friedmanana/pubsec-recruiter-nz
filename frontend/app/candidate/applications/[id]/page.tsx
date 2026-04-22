@@ -280,15 +280,20 @@ function ApplicationWorkspace() {
     setCopied(key); setTimeout(() => setCopied(null), 2000)
   }
 
+  const [downloadingPdf, setDownloadingPdf] = useState<'cv' | 'cover_letter' | null>(null)
+
   const handleDownloadPdf = async (type: 'cv' | 'cover_letter', label: string) => {
     const suffix = app?.job_title
       ? `_${app.job_title}${app.company ? `_${app.company}` : ''}`.replace(/[^a-zA-Z0-9_-]/g, '_')
       : ''
     const filename = `${label.replace(' ', '_')}${suffix}.pdf`
+    setDownloadingPdf(type)
     try {
       await candidateApi.downloadPdf(id, type, filename)
     } catch (e) {
       setError(String(e))
+    } finally {
+      setDownloadingPdf(null)
     }
   }
 
@@ -573,12 +578,16 @@ function ApplicationWorkspace() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleDownloadPdf('cv', 'Enhanced_CV')}
-                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+                      disabled={downloadingPdf === 'cv'}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-400 rounded-xl transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download PDF
+                      {downloadingPdf === 'cv' ? (
+                        <><Spinner />Generating…</>
+                      ) : (
+                        <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>Download PDF</>
+                      )}
                     </button>
                     <button
                       onClick={() => handleCopy(enhancedCv.content_text, 'cv')}
@@ -720,12 +729,16 @@ function ApplicationWorkspace() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleDownloadPdf('cover_letter', 'Cover_Letter')}
-                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors"
+                      disabled={downloadingPdf === 'cover_letter'}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-green-400 rounded-xl transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download PDF
+                      {downloadingPdf === 'cover_letter' ? (
+                        <><Spinner />Generating…</>
+                      ) : (
+                        <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>Download PDF</>
+                      )}
                     </button>
                     <button
                       onClick={() => handleCopy(clEditText, 'cl')}
