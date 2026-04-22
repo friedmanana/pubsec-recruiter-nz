@@ -58,10 +58,17 @@ export default function CandidateDashboard() {
   useEffect(() => {
     candidateApi.listApplications()
       .then(async (apps) => {
-        // Auto-delete any applications with no job title and no content
-        // (these are abandoned workspaces the user opened but never filled in)
-        const empty = apps.filter((a) => !a.job_title?.trim())
-        await Promise.all(empty.map((a) => candidateApi.deleteApplication(a.id).catch(() => {})))
+        // Auto-delete only applications that are completely empty AND less than 10 minutes old
+        // (truly abandoned workspaces — user opened one, filled nothing, and navigated away)
+        const tenMinutesAgo = Date.now() - 10 * 60 * 1000
+        const trulyEmpty = apps.filter((a) =>
+          !a.job_title?.trim() &&
+          !a.company?.trim() &&
+          !a.job_description_text?.trim() &&
+          new Date(a.created_at).getTime() > tenMinutesAgo
+        )
+        await Promise.all(trulyEmpty.map((a) => candidateApi.deleteApplication(a.id).catch(() => {})))
+        // Show all applications that have a title
         setApplications(apps.filter((a) => a.job_title?.trim()))
       })
       .catch(console.error)
