@@ -17,7 +17,7 @@ const APPS = [
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 3h-8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z" />
           </svg>
         ),
-        primary: true,
+        primary: false,
       },
       {
         label: 'Job Seeker',
