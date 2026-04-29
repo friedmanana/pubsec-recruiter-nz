@@ -9,7 +9,7 @@ import type { JobApplication } from '@/types'
 
 const STATUS_CONFIG = {
   DRAFT:       { label: 'Draft',       color: 'bg-slate-100 text-slate-600',     dot: 'bg-slate-400' },
-  IN_PROGRESS: { label: 'In Progress', color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500'  },
+  IN_PROGRESS: { label: 'In Progress', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
   COMPLETE:    { label: 'Complete',    color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
 }
 
